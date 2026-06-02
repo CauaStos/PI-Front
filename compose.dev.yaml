@@ -17,15 +17,22 @@ services:
       retries: 10
 
   app:
-    build: .
+    image: oven/bun:1.3.14
     restart: unless-stopped
+    working_dir: /app
+    command: sh -lc "bun install --frozen-lockfile && bun run dev --host 0.0.0.0"
     environment:
+      CHOKIDAR_USEPOLLING: "true"
       DATABASE_URL: postgres://${POSTGRES_USER:-onstage}:${POSTGRES_PASSWORD:-onstage}@db:5432/${POSTGRES_DB:-onstage}
     ports:
-      - "5173:3000"
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - app-dev-node-modules:/app/node_modules
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   onstage-postgres:
+  app-dev-node-modules:

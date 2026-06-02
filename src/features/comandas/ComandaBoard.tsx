@@ -229,7 +229,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     return (
         <main className="min-h-svh bg-background px-10 py-8 text-foreground max-sm:px-5 max-sm:py-5">
             <div className="mx-auto grid max-w-[1160px] grid-cols-[230px_minmax(0,1fr)] gap-11 max-xl:grid-cols-1">
-                <section className="flex min-h-[720px] flex-col pt-[230px] max-xl:min-h-0 max-xl:pt-0">
+                <section className="grid content-start gap-8">
                     <CashPanel
                         totalRevenue={totalRevenue}
                         totalOrders={totalOrders}
@@ -246,7 +246,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                         </Alert>
                     ) : null}
 
-                    <div className="mt-auto grid gap-3 max-xl:mt-8 max-xl:grid-cols-5 max-lg:grid-cols-2 max-sm:grid-cols-1">
+                    <div className="grid gap-3 max-xl:grid-cols-5 max-lg:grid-cols-2 max-sm:grid-cols-1">
                         <ActionButton onClick={createComanda} disabled={isMutating} tone="primary">
                             {isMutating ? (
                                 <Loader2 className="size-4 animate-spin" />
@@ -307,7 +307,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                                 ))}
                             </div>
 
-                            <section className="mt-6 max-w-[980px]">
+                            <section className="mt-6 max-w-245">
                                 <div className="flex items-end justify-between gap-4">
                                     <h2 className="text-[22px] font-bold tracking-normal">Pedidos</h2>
                                     <span className="text-sm font-semibold text-muted-foreground">
@@ -527,7 +527,7 @@ function CashPanel({
     totalSongs: number
 }) {
     return (
-        <Card className="border-0 bg-transparent py-0 shadow-none ring-0">
+        <Card className="h-fit self-start border-0 bg-transparent py-0 shadow-none ring-0">
             <CardHeader className="px-0">
                 <CardTitle className="text-[22px] font-bold tracking-normal">Caixa</CardTitle>
             </CardHeader>
@@ -640,7 +640,7 @@ function ComandaCard({
                     <AvatarGroup className="mt-1 -space-x-1.5">
                         {comanda.members.map((member, index) => (
                             <MemberAvatar
-                                key={`${member.employee}-${index}`}
+                                key={`${member.employee}-${member.name}`}
                                 label={member.avatar}
                                 tone={index}
                             />

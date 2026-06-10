@@ -1,8 +1,6 @@
 import { ThemeToggle } from "@/components/theme-toggle"
 import {
-  LayoutDashboard,
   Mic2,
-  Music,
   PackageSearch,
   ReceiptText,
 } from "lucide-react"
@@ -23,10 +21,8 @@ import {
 } from "@/components/ui/sidebar"
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Comandas", href: "/comandas", icon: ReceiptText },
   { label: "Produtos", href: "/produtos", icon: PackageSearch },
-  { label: "Musicas", href: "/musicas", icon: Music },
 ]
 
 export function AppSidebar() {

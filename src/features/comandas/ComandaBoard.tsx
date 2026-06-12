@@ -176,6 +176,22 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     const cashRevenue = finishedToday.reduce((s, c) => s + calcTotal(c), 0)
     const historyRows = buildHistoryRows(comandas)
     const selectedOrders = selected?.orders.filter((order) => selectedOrderIds.includes(order.id)) ?? []
+    const selectedActive = selected ? isTabActive(selected) : false
+
+    const selectedProduct = board.products.find((p) => p.id === productId)
+    const addQuantityValid =
+        Number.isInteger(quantity) &&
+        quantity >= 1 &&
+        !!selectedProduct &&
+        quantity <= selectedProduct.stock
+
+    const editProduct = board.products.find((p) => p.id === editProductId)
+    const editProductChanged = !!editOrder && editProductId !== editOrder.product
+    const editQuantityValid =
+        Number.isInteger(editQuantity) &&
+        editQuantity >= 1 &&
+        !!editProduct &&
+        (!editProductChanged || editQuantity <= editProduct.stock)
 
     useEffect(() => {
         const interval = window.setInterval(() => setNow(new Date()), 60_000)
@@ -238,6 +254,29 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
 
     async function addOrder() {
         if (!selected) return
+        if (!isTabActive(selected)) {
+            setMessage({
+                type: "error",
+                text: "Esta comanda esta finalizada ou cancelada e nao aceita novos pedidos.",
+            })
+            return
+        }
+        const product = board.products.find((p) => p.id === productId)
+        if (!product) {
+            setMessage({ type: "error", text: "Selecione um produto valido." })
+            return
+        }
+        if (!Number.isInteger(quantity) || quantity < 1) {
+            setMessage({ type: "error", text: "Informe uma quantidade valida (minimo 1)." })
+            return
+        }
+        if (quantity > product.stock) {
+            setMessage({
+                type: "error",
+                text: `Estoque insuficiente para ${product.name}. Disponivel: ${product.stock}.`,
+            })
+            return
+        }
         const ok = await mutate(async () => {
             await api.post("/orders", {
                 tab: selected.id,
@@ -262,6 +301,36 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
 
     async function saveEditOrder() {
         if (!editOrder) return
+        if (selected && !isTabActive(selected)) {
+            setMessage({
+                type: "error",
+                text: "Comanda finalizada ou cancelada nao permite editar pedidos.",
+            })
+            return
+        }
+        if (!canEditOrder(editOrder)) {
+            setMessage({
+                type: "error",
+                text: "Pedidos entregues, concluidos ou cancelados nao podem ser editados.",
+            })
+            return
+        }
+        const product = board.products.find((p) => p.id === editProductId)
+        if (!product) {
+            setMessage({ type: "error", text: "Selecione um produto valido." })
+            return
+        }
+        if (!Number.isInteger(editQuantity) || editQuantity < 1) {
+            setMessage({ type: "error", text: "Informe uma quantidade valida (minimo 1)." })
+            return
+        }
+        if (editProductId !== editOrder.product && editQuantity > product.stock) {
+            setMessage({
+                type: "error",
+                text: `Estoque insuficiente para ${product.name}. Disponivel: ${product.stock}.`,
+            })
+            return
+        }
         const ok = await mutate(async () => {
             await api.patch(`/orders/${editOrder.id}`, {
                 product: editProductId !== editOrder.product ? editProductId : undefined,
@@ -275,6 +344,20 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
 
     async function updateOrderStatus(order: ComandaOrder, status: OrderStatus) {
         if (order.status === status) return
+        if (selected && !isTabActive(selected)) {
+            setMessage({
+                type: "error",
+                text: "Comanda finalizada ou cancelada nao permite alterar pedidos.",
+            })
+            return
+        }
+        if (order.status === "cancelled") {
+            setMessage({
+                type: "error",
+                text: "Um pedido cancelado nao pode mudar de status.",
+            })
+            return
+        }
         await mutate(async () => {
             await api.patch(`/orders/${order.id}`, { status })
             return "Status do pedido atualizado."
@@ -282,6 +365,13 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     }
 
     async function cancelOrder(order: ComandaOrder) {
+        if (!canCancelOrder(order)) {
+            setMessage({
+                type: "error",
+                text: "Este pedido ja esta cancelado ou concluido.",
+            })
+            return
+        }
         await updateOrderStatus(order, "cancelled")
     }
 
@@ -290,6 +380,19 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
         let ok = false
 
         if (pendingAction.type === "finalizar-comanda") {
+            if (!isTabActive(pendingAction.comanda)) {
+                setPendingAction(null)
+                setMessage({ type: "error", text: "Esta comanda ja foi finalizada ou cancelada." })
+                return
+            }
+            if (billableOrderCount(pendingAction.comanda) === 0) {
+                setPendingAction(null)
+                setMessage({
+                    type: "error",
+                    text: "Nao e possivel finalizar uma comanda sem pedidos ativos.",
+                })
+                return
+            }
             ok = await mutate(async () => {
                 await api.patch(`/tabs/${pendingAction.comanda.id}`, { status: "finished" })
                 return "Comanda finalizada."
@@ -297,6 +400,11 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
         }
 
         if (pendingAction.type === "cancelar-comanda") {
+            if (!isTabActive(pendingAction.comanda)) {
+                setPendingAction(null)
+                setMessage({ type: "error", text: "Esta comanda ja foi finalizada ou cancelada." })
+                return
+            }
             ok = await mutate(async () => {
                 await api.patch(`/tabs/${pendingAction.comanda.id}`, { status: "cancelled" })
                 return "Comanda cancelada."
@@ -383,6 +491,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                                 <OrdersTable
                                     orders={selected?.orders ?? []}
                                     selectedIds={selectedOrderIds}
+                                    comandaActive={selectedActive}
                                     isMutating={isMutating}
                                     onSelectedIdsChange={setSelectedOrderIds}
                                     onAdd={() => setAddOpen(true)}
@@ -449,17 +558,29 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                             <input
                                 className="h-9 rounded-lg border border-input bg-background px-3"
                                 min={1}
+                                max={selectedProduct?.stock}
                                 type="number"
                                 value={quantity}
                                 onChange={(e) => setQuantity(Number(e.target.value))}
                             />
+                            {selectedProduct ? (
+                                <span className="text-xs font-medium text-muted-foreground">
+                                    {selectedProduct.stock} em estoque
+                                    {quantity > selectedProduct.stock
+                                        ? " - quantidade acima do disponivel"
+                                        : ""}
+                                </span>
+                            ) : null}
                         </label>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setAddOpen(false)}>
                             Cancelar
                         </Button>
-                        <Button onClick={addOrder} disabled={isMutating || !selected}>
+                        <Button
+                            onClick={addOrder}
+                            disabled={isMutating || !selectedActive || !addQuantityValid}
+                        >
                             {isMutating ? "Salvando..." : "Adicionar pedido"}
                         </Button>
                     </DialogFooter>
@@ -508,17 +629,26 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                             <input
                                 className="h-9 rounded-lg border border-input bg-background px-3"
                                 min={1}
+                                max={editProductChanged ? editProduct?.stock : undefined}
                                 type="number"
                                 value={editQuantity}
                                 onChange={(e) => setEditQuantity(Number(e.target.value))}
                             />
+                            {editProductChanged && editProduct ? (
+                                <span className="text-xs font-medium text-muted-foreground">
+                                    {editProduct.stock} em estoque
+                                    {editQuantity > editProduct.stock
+                                        ? " - quantidade acima do disponivel"
+                                        : ""}
+                                </span>
+                            ) : null}
                         </label>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setEditOrder(null)}>
                             Cancelar
                         </Button>
-                        <Button onClick={saveEditOrder} disabled={isMutating}>
+                        <Button onClick={saveEditOrder} disabled={isMutating || !editQuantityValid}>
                             {isMutating ? "Salvando..." : "Salvar alteracoes"}
                         </Button>
                     </DialogFooter>
@@ -651,6 +781,7 @@ function ComandaCard({
         (song) => song.tab === comanda.id && (song.status === "playing" || song.status === "queued")
     )
     const terminal = comanda.status === "finished" || comanda.status === "cancelled"
+    const hasBillableOrders = billableOrderCount(comanda) > 0
 
     return (
         <Card
@@ -719,7 +850,7 @@ function ComandaCard({
                                 <DropdownMenuItem disabled>Sem ações disponíveis</DropdownMenuItem>
                             ) : (
                                 <>
-                                    <DropdownMenuItem onClick={onFinish}>
+                                    <DropdownMenuItem onClick={onFinish} disabled={!hasBillableOrders}>
                                         <Check className="size-4" /> Finalizar Comanda
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
@@ -766,6 +897,7 @@ function QrCodeSlot({ comanda }: { comanda?: Comanda }) {
 function OrdersTable({
     orders,
     selectedIds,
+    comandaActive,
     isMutating,
     onSelectedIdsChange,
     onAdd,
@@ -776,6 +908,7 @@ function OrdersTable({
 }: {
     orders: ComandaOrder[]
     selectedIds: string[]
+    comandaActive: boolean
     isMutating: boolean
     onSelectedIdsChange: (ids: string[]) => void
     onAdd: () => void
@@ -784,7 +917,7 @@ function OrdersTable({
     onStatusChange: (order: ComandaOrder, status: OrderStatus) => void
     onRemoveSelected: () => void
 }) {
-    const deletableOrders = orders.filter(canDeleteOrder)
+    const deletableOrders = comandaActive ? orders.filter(canDeleteOrder) : []
     const allSelected = deletableOrders.length > 0 && deletableOrders.every((o) => selectedIds.includes(o.id))
     const selectedCount = selectedIds.length
 
@@ -793,7 +926,7 @@ function OrdersTable({
     }
 
     function toggleOrder(order: ComandaOrder) {
-        if (!canDeleteOrder(order)) return
+        if (!comandaActive || !canDeleteOrder(order)) return
         onSelectedIdsChange(
             selectedIds.includes(order.id)
                 ? selectedIds.filter((id) => id !== order.id)
@@ -806,9 +939,10 @@ function OrdersTable({
             <div className="mb-3 flex justify-end lg:hidden">
                 <button
                     type="button"
-                    title="Adicionar pedido"
+                    title={comandaActive ? "Adicionar pedido" : "Comanda encerrada"}
                     onClick={onAdd}
-                    className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                    disabled={!comandaActive}
+                    className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                 >
                     <Plus className="size-4" />
                 </button>
@@ -855,9 +989,10 @@ function OrdersTable({
                         <TableHead className="w-20 px-2 text-right">
                             <button
                                 type="button"
-                                title="Adicionar pedido"
+                                title={comandaActive ? "Adicionar pedido" : "Comanda encerrada"}
                                 onClick={onAdd}
-                                className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                                disabled={!comandaActive}
+                                className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                             >
                                 <Plus className="size-4" />
                             </button>
@@ -868,7 +1003,7 @@ function OrdersTable({
                     {orders.length ? (
                         orders.map((order) => {
                             const selected = selectedIds.includes(order.id)
-                            const locked = !canDeleteOrder(order)
+                            const locked = !comandaActive || !canDeleteOrder(order)
                             return (
                                 <TableRow
                                     key={order.id}
@@ -897,6 +1032,7 @@ function OrdersTable({
                                     <TableCell>
                                         <StatusSelector
                                             order={order}
+                                            disabled={!comandaActive || order.status === "cancelled"}
                                             onStatusChange={onStatusChange}
                                         />
                                     </TableCell>
@@ -915,14 +1051,17 @@ function OrdersTable({
                                                 <MoreHorizontal className="size-4" />
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" className="w-40">
-                                                <DropdownMenuItem onClick={() => onEdit(order)}>
+                                                <DropdownMenuItem
+                                                    onClick={() => onEdit(order)}
+                                                    disabled={!comandaActive || !canEditOrder(order)}
+                                                >
                                                     <Pencil className="size-4" /> Editar
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
                                                     variant="destructive"
                                                     onClick={() => onCancel(order)}
-                                                    disabled={order.status === "cancelled"}
+                                                    disabled={!comandaActive || !canCancelOrder(order)}
                                                 >
                                                     <X className="size-4" /> Cancelar pedido
                                                 </DropdownMenuItem>
@@ -950,14 +1089,19 @@ function OrdersTable({
 
 function StatusSelector({
     order,
+    disabled,
     onStatusChange,
 }: {
     order: ComandaOrder
+    disabled: boolean
     onStatusChange: (order: ComandaOrder, status: OrderStatus) => void
 }) {
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger className="rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+            <DropdownMenuTrigger
+                disabled={disabled}
+                className="rounded-md focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-70"
+            >
                 <Badge
                     className={cn(
                         "rounded-md px-2 py-1 text-xs font-bold",
@@ -1237,6 +1381,18 @@ function MemberAvatar({ label, tone }: { label: string; tone: number }) {
 
 function canDeleteOrder(order: ComandaOrder) {
     return !completedOrderStatuses.has(order.status)
+}
+
+function canEditOrder(order: ComandaOrder) {
+    return order.status === "open" || order.status === "in_progress"
+}
+
+function canCancelOrder(order: ComandaOrder) {
+    return order.status !== "cancelled" && order.status !== "finished"
+}
+
+function billableOrderCount(comanda: Comanda) {
+    return comanda.orders.filter((order) => order.status !== "cancelled").length
 }
 
 function isTabActive(comanda: Comanda) {

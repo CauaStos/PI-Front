@@ -53,6 +53,7 @@ import type {
     ComandaBoardData,
     ComandaOrder,
     OrderStatus,
+    Song,
 } from "@/src/data/comanda-board"
 
 type BoardData = ComandaBoardData
@@ -134,7 +135,6 @@ const avatarTones = [
     "bg-cyan-200 text-cyan-950",
 ]
 
-const queueByTable: Record<string, string[]> = {}
 const qrCells = new Set([
     0, 1, 2, 4, 5, 6,
     7, 9, 11, 13,
@@ -195,12 +195,13 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     }
 
     async function reload() {
-        const [tabs, products, employees] = await Promise.all([
+        const [tabs, products, employees, songs] = await Promise.all([
             api.get<BoardData["comandas"]>("/tabs"),
             api.get<BoardData["products"]>("/products"),
             api.get<BoardData["employees"]>("/employees"),
+            api.get<BoardData["songs"]>("/songs"),
         ])
-        const next = { comandas: tabs, products, employees }
+        const next = { comandas: tabs, products, employees, songs }
         setBoard(next)
         return next
     }
@@ -361,6 +362,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                                                 onCancel={() =>
                                                     setPendingAction({ type: "cancelar-comanda", comanda })
                                                 }
+                                                songs={board.songs}
                                             />
                                         ))}
                                     </div>
@@ -635,14 +637,18 @@ function ComandaCard({
     onClick,
     onFinish,
     onCancel,
+    songs,
 }: {
     comanda: Comanda
     selected: boolean
     onClick: () => void
     onFinish: () => void
     onCancel: () => void
+    songs: Song[]
 }) {
-    const queue = getQueue(comanda.id)
+    const queue = songs.filter(
+        (song) => song.tab === comanda.id && (song.status === "playing" || song.status === "queued")
+    )
     const terminal = comanda.status === "finished" || comanda.status === "cancelled"
 
     return (
@@ -677,9 +683,10 @@ function ComandaCard({
                         <p className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
                             <ListMusic className="size-3.5" /> Fila de musicas
                         </p>
-                        {queue.slice(0, 2).map((song, index) => (
-                            <p key={song} className="truncate text-xs font-semibold text-foreground">
-                                {index + 1}. {song}
+                        {queue.slice(0, 2).map((song) => (
+                            <p key={song.id} className="truncate text-xs font-semibold text-foreground">
+                                {song.status === "playing" ? "Tocando: " : `${song.position}. `}
+                                {song.title}
                             </p>
                         ))}
                         {queue.length > 2 ? (
@@ -1270,10 +1277,6 @@ function getActionDescription(action: PendingAction) {
 
 function isPendingActionEmpty(action: PendingAction) {
     return action?.type === "remover-pedidos" && action.orders.length === 0
-}
-
-function getQueue(comandaId: string): string[] {
-    return queueByTable[comandaId] ?? []
 }
 
 function calcComandaTotal(comanda: Comanda): number {

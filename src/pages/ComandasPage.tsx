@@ -10,12 +10,13 @@ export function ComandasPage() {
     useEffect(() => {
         async function load() {
             try {
-                const [tabs, products, employees] = await Promise.all([
+                const [tabs, products, employees, songs] = await Promise.all([
                     api.get<ComandaBoardData["comandas"]>("/tabs"),
                     api.get<ComandaBoardData["products"]>("/products"),
                     api.get<ComandaBoardData["employees"]>("/employees"),
+                    api.get<ComandaBoardData["songs"]>("/songs"),
                 ])
-                setData({ comandas: tabs, products, employees })
+                setData({ comandas: tabs, products, employees, songs })
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Erro ao carregar dados.")
             }

@@ -57,8 +57,24 @@ export type Comanda = {
     closedAt: string | null
 }
 
+export type SongStatus = "queued" | "playing" | "finished" | "cancelled"
+
+export type Song = {
+    id: string
+    title: string
+    tab: string
+    tabName: string
+    status: SongStatus
+    position: number | null
+    requestedAt: string
+    startedAt: string | null
+    finishedAt: string | null
+    cancelledAt: string | null
+}
+
 export type ComandaBoardData = {
     employees: Employee[]
     products: Product[]
     comandas: Comanda[]
+    songs: Song[]
 }

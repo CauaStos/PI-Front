@@ -44,12 +44,26 @@ export default function ProdutosPage() {
     }
 
     useEffect(() => {
-        reload()
+        let cancelled = false
+
+        api
+            .get<Product[]>("/products")
             .then((data) => {
+                if (cancelled) return
+
+                setProducts(data)
                 if (data.length > 0) setSelected(data[0]!)
             })
-            .catch(() => setMessage({ type: "error", text: "Erro ao carregar produtos." }))
-            .finally(() => setLoading(false))
+            .catch(() => {
+                if (!cancelled) setMessage({ type: "error", text: "Erro ao carregar produtos." })
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false)
+            })
+
+        return () => {
+            cancelled = true
+        }
     }, [])
 
     async function mutate(action: () => Promise<string>) {

@@ -1,31 +1,31 @@
-# Projeto Interdisciplinar
+# PI Frontend
 
-## Desenvolvimento com Docker
+Interface web do Projeto Interdisciplinar, feita com React e Vite.
 
-Use o Compose de desenvolvimento para rodar o Vite com live reload:
+## Requisitos
+
+- Node.js 22 ou superior
+- Backend em execucao
+
+## Rodando localmente
 
 ```bash
-docker compose -f compose.dev.yaml up app
+npm install
+cp .env.example .env
+npm run dev
 ```
 
-Abra `http://localhost:5173`.
+Abra `http://localhost:5173`. Antes de iniciar, confira se `VITE_API_URL` no
+`.env` aponta para a API correta.
 
-Esse modo monta o codigo local dentro do container, entao mudancas em `src/`,
-`components/` e outros arquivos do app aparecem sem rebuild da imagem.
-
-Para parar:
+## Scripts
 
 ```bash
-docker compose -f compose.dev.yaml down
-```
-
-## Build de producao
-
-O `compose.yaml` principal gera uma imagem com `dist/` embutido. Depois de
-alterar codigo, rode rebuild:
-
-```bash
-docker compose up -d --build app
+npm run dev        # inicia o Vite com recarregamento automatico
+npm run build      # gera a versao de producao
+npm start          # visualiza o build de producao
+npm run lint       # verifica o codigo
+npm run typecheck  # verifica os tipos TypeScript
 ```
 
 ## Adding components

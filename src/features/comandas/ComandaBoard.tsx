@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { api } from "@/lib/api"
+import { authClient } from "@/lib/auth-client"
 import { format as formatMoney, multiply, sum } from "@/lib/money"
 import { cn } from "@/lib/utils"
 import type {
@@ -147,6 +148,13 @@ const qrCells = new Set([
 ])
 
 export function ComandaBoard({ initialData }: { initialData: BoardData }) {
+    const { data: session } = authClient.useSession()
+    const employeeRole =
+        (session?.user as { employeeRole?: string } | undefined)?.employeeRole ??
+        ((session?.user as { role?: string } | undefined)?.role === "admin"
+            ? "admin"
+            : "garcom")
+    const canManageOrders = employeeRole === "admin" || employeeRole === "garcom"
     const [board, setBoard] = useState(initialData)
     const [now, setNow] = useState(() => new Date())
     const [selectedId, setSelectedId] = useState(initialData.comandas[0]?.id)
@@ -458,7 +466,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                             <div className="grid max-w-[860px] grid-cols-[minmax(0,1fr)_180px] gap-4 max-md:max-w-none max-md:grid-cols-1">
                                 <div className="h-[520px] overflow-y-auto px-2 pt-2 shadow-[inset_0_-18px_18px_-22px_rgba(0,0,0,0.35)] max-sm:h-[440px]">
                                     <div className="grid grid-cols-3 gap-3 max-md:grid-cols-2 max-sm:grid-cols-1">
-                                        <CreateComandaCard onClick={createComanda} disabled={isMutating} />
+                                        <CreateComandaCard onClick={createComanda} disabled={isMutating || !canManageOrders} />
                                         {todayComandas.map((comanda) => (
                                             <ComandaCard
                                                 key={comanda.id}
@@ -498,6 +506,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                                     onEdit={openEditDialog}
                                     onCancel={cancelOrder}
                                     onStatusChange={updateOrderStatus}
+                                    canManageOrders={canManageOrders}
                                     onRemoveSelected={() =>
                                         setPendingAction({
                                             type: "remover-pedidos",
@@ -905,6 +914,7 @@ function OrdersTable({
     onCancel,
     onStatusChange,
     onRemoveSelected,
+    canManageOrders,
 }: {
     orders: ComandaOrder[]
     selectedIds: string[]
@@ -916,6 +926,7 @@ function OrdersTable({
     onCancel: (order: ComandaOrder) => void
     onStatusChange: (order: ComandaOrder, status: OrderStatus) => void
     onRemoveSelected: () => void
+    canManageOrders: boolean
 }) {
     const deletableOrders = comandaActive ? orders.filter(canDeleteOrder) : []
     const allSelected = deletableOrders.length > 0 && deletableOrders.every((o) => selectedIds.includes(o.id))
@@ -941,7 +952,7 @@ function OrdersTable({
                     type="button"
                     title={comandaActive ? "Adicionar pedido" : "Comanda encerrada"}
                     onClick={onAdd}
-                    disabled={!comandaActive}
+                    disabled={!comandaActive || !canManageOrders}
                     className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                 >
                     <Plus className="size-4" />
@@ -956,7 +967,7 @@ function OrdersTable({
                         size="sm"
                         className="bg-red-900 text-white hover:bg-red-950"
                         onClick={onRemoveSelected}
-                        disabled={isMutating}
+                        disabled={isMutating || !canManageOrders}
                     >
                         <Trash2 className="size-4" /> Remover
                     </Button>
@@ -969,7 +980,7 @@ function OrdersTable({
                             <input
                                 type="checkbox"
                                 checked={allSelected}
-                                disabled={deletableOrders.length === 0}
+                                disabled={deletableOrders.length === 0 || !canManageOrders}
                                 onChange={toggleAll}
                                 aria-label="Selecionar pedidos"
                                 className="size-4 rounded border-border accent-zinc-950"
@@ -991,7 +1002,7 @@ function OrdersTable({
                                 type="button"
                                 title={comandaActive ? "Adicionar pedido" : "Comanda encerrada"}
                                 onClick={onAdd}
-                                disabled={!comandaActive}
+                                disabled={!comandaActive || !canManageOrders}
                                 className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                             >
                                 <Plus className="size-4" />

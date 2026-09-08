@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
+import { authClient } from "@/lib/auth-client"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Sidebar,
@@ -29,6 +30,9 @@ const navItems = [
 
 export function AppSidebar() {
   const { pathname } = useLocation()
+  const { data: session } = authClient.useSession()
+  const user = session?.user
+  const initials = user?.name?.trim().charAt(0).toUpperCase() || "U"
 
   return (
     <Sidebar
@@ -81,16 +85,25 @@ export function AppSidebar() {
         <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none dark:border-zinc-800 dark:bg-zinc-900">
           <Avatar size="sm" className="bg-violet-200 text-violet-950">
             <AvatarFallback className="bg-violet-200 text-xs font-bold text-violet-950">
-              J
+              {initials}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-bold">Joao Pires</p>
+            <p className="truncate text-sm font-bold">
+              {user?.name ?? "Funcionario"}
+            </p>
             <p className="truncate text-xs font-medium text-zinc-500">
-              joaopires@emaildash.com
+              {user?.email ?? ""}
             </p>
           </div>
         </div>
+        <button
+          type="button"
+          className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+          onClick={() => void authClient.signOut()}
+        >
+          Sair
+        </button>
       </SidebarFooter>
     </Sidebar>
   )

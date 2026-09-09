@@ -54,7 +54,7 @@ import type {
     ComandaOrder,
     OrderStatus,
     Song,
-} from "@/src/data/comanda-board"
+} from "@/data/comanda-board"
 
 type BoardData = ComandaBoardData
 type Comanda = BoardData["comandas"][number]

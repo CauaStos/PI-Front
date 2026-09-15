@@ -65,6 +65,7 @@ type HistoryComanda = {
     openedAt: Date
     closedAt: Date
     orders: number
+    ordersList: ComandaOrder[]
     revenue: number
 }
 type HistoryRow = {
@@ -168,7 +169,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     const todayKey = getDayKey(now)
     const todayComandas = comandas.filter((comanda) => isVisibleInToday(comanda, todayKey))
     const selected = todayComandas.find((c) => c.id === selectedId) ?? todayComandas[0]
-    const productOptions = board.products.filter((p) => p.stock > 0)
+    const productOptions = board.products
     const activeComandas = comandas.filter((c) => c.status !== "finished" && c.status !== "cancelled")
     const finishedToday = comandas.filter((c) => c.status === "finished" && isClosedOnDay(c, todayKey))
     const cashOrders = finishedToday.reduce((s, c) => s + c.orders.length, 0)
@@ -988,6 +989,7 @@ function HistoryTable({
     rows: HistoryRow[]
 }) {
     const [expandedDays, setExpandedDays] = useState<string[]>(rows[0] ? [rows[0].dayKey] : [])
+    const [selectedComanda, setSelectedComanda] = useState<HistoryComanda | null>(null)
 
     function toggleDay(dayKey: string) {
         setExpandedDays((current) =>
@@ -998,6 +1000,7 @@ function HistoryTable({
     }
 
     return (
+        <>
         <Card className="rounded-xl py-0 shadow-none">
             <Table>
                 <TableHeader>
@@ -1059,7 +1062,8 @@ function HistoryTable({
                                                     {row.comandas.map((comanda) => (
                                                         <div
                                                             key={comanda.id}
-                                                            className="grid grid-cols-[minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(135px,1fr)_80px_100px] items-center gap-3 rounded-lg bg-background px-3 py-2 text-sm max-lg:grid-cols-2 max-sm:grid-cols-1"
+                                                            onClick={() => setSelectedComanda(comanda)}
+                                                            className="grid grid-cols-[minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(135px,1fr)_80px_100px] items-center gap-3 rounded-lg bg-background px-3 py-2 text-sm max-lg:grid-cols-2 max-sm:grid-cols-1 cursor-pointer hover:bg-muted/50 transition-colors"
                                                         >
                                                             <div className="min-w-0">
                                                                 <p className="text-[11px] font-bold text-muted-foreground uppercase">
@@ -1129,6 +1133,53 @@ function HistoryTable({
                 </TableBody>
             </Table>
         </Card>
+
+            <Dialog open={selectedComanda !== null} onOpenChange={(open) => !open && setSelectedComanda(null)}>
+                <DialogContent className="max-w-5xl sm:max-w-5xl">
+                    <DialogHeader>
+                        <DialogTitle>Pedidos da Comanda {selectedComanda?.number}</DialogTitle>
+                        <DialogDescription>Listagem de todos os itens registrados nesta comanda.</DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-[60vh] overflow-y-auto pr-2">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Pedido</TableHead>
+                                    <TableHead>Funcionario</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Pedido Em</TableHead>
+                                    <TableHead className="text-right">Qtd</TableHead>
+                                    <TableHead className="text-right">Preco Un.</TableHead>
+                                    <TableHead className="text-right">Subtotal</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {selectedComanda?.ordersList.map(order => (
+                                    <TableRow key={order.id}>
+                                        <TableCell className="font-medium">{order.productName}</TableCell>
+                                        <TableCell>{order.employeeName}</TableCell>
+                                        <TableCell>
+                                            <Badge className={cn("rounded-md px-2 py-1 text-xs font-bold", statusClass[order.status])}>
+                                                {orderStatusLabel[order.status]}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{formatDate(order.orderedAt)}</TableCell>
+                                        <TableCell className="text-right">{order.quantity}</TableCell>
+                                        <TableCell className="text-right">{formatMoney(order.unitPrice)}</TableCell>
+                                        <TableCell className="text-right">{formatMoney(order.unitPrice * order.quantity)}</TableCell>
+                                    </TableRow>
+                                ))}
+                                {selectedComanda?.ordersList.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="text-center text-muted-foreground py-6">Nenhum pedido</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
     )
 }
 
@@ -1235,6 +1286,7 @@ function buildHistoryRows(comandas: Comanda[]) {
             openedAt: new Date(comanda.openedAt),
             closedAt,
             orders: comanda.orders.length,
+            ordersList: comanda.orders,
             revenue,
         })
         if (closedAt < current.firstClosedAt) current.firstClosedAt = closedAt

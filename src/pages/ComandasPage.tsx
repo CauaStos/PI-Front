@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { ComandaBoard } from "@/src/features/comandas/ComandaBoard"
-import type { ComandaBoardData } from "@/src/data/comanda-board"
+import { ComandaBoard } from "@/features/comandas/ComandaBoard"
+import type { ComandaBoardData } from "@/data/comanda-board"
 import { api } from "@/lib/api"
 
 export function ComandasPage() {

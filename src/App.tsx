@@ -1,5 +1,5 @@
 import { ThemeProvider } from "@/components/theme-provider"
-import { AppRoutes } from "@/src/routes/AppRoutes"
+import { AppRoutes } from "@/routes/AppRoutes"
 import { BrowserRouter } from "react-router-dom"
 import { TooltipProvider } from "@/components/ui/tooltip"
 

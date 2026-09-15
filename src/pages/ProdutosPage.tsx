@@ -15,7 +15,7 @@ import {
 import { api } from "@/lib/api"
 import { authClient } from "@/lib/auth-client"
 import { format as formatMoney, parseInput } from "@/lib/money"
-import type { Product } from "@/src/data/comanda-board"
+import type { Product } from "@/data/comanda-board"
 
 export default function ProdutosPage() {
     const { data: session } = authClient.useSession()

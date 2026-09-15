@@ -1,9 +1,9 @@
 import { Navigate, Route, Routes } from "react-router-dom"
 
-import { ComandasPage } from "@/src/pages/ComandasPage"
-import MusicasPage from "@/src/pages/MusicasPage"
-import ProdutosPage from "@/src/pages/ProdutosPage"
-import { LoginPage } from "@/src/pages/LoginPage"
+import { ComandasPage } from "@/pages/ComandasPage"
+import MusicasPage from "@/pages/MusicasPage"
+import ProdutosPage from "@/pages/ProdutosPage"
+import { LoginPage } from "@/pages/LoginPage"
 import { AuthGuard } from "./AuthGuard"
 
 export function AppRoutes() {

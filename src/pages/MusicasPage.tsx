@@ -14,7 +14,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { api } from "@/lib/api"
-import type { Comanda, Song } from "@/src/data/comanda-board"
+import type { Comanda, Song } from "@/data/comanda-board"
 
 type PendingAction = { type: "advance" } | { type: "cancel"; song: Song } | null
 

@@ -4,11 +4,15 @@ import path from "node:path"
 import { defineConfig } from "vite"
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react({ compiler: true }), tailwindcss()],
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "."),
-    },
+    alias: [
+      {
+        find: /^@\/(components|lib)\//,
+        replacement: `${path.resolve(__dirname)}/$1/`,
+      },
+      { find: /^@\//, replacement: `${path.resolve(__dirname, "src")}/` },
+    ],
   },
   server: {
     host: "0.0.0.0",

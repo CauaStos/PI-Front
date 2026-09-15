@@ -180,12 +180,12 @@ export default function ProdutosPage() {
                     </Button>
                 </div>
 
-                {message ? (
+                {message && !createOpen && !editOpen ? (
                     <div
                         className={`mb-4 rounded-lg px-4 py-3 text-sm font-semibold ${
                             message.type === "error"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-emerald-100 text-emerald-800"
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
+                                : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200"
                         }`}
                     >
                         {message.text}
@@ -267,7 +267,10 @@ export default function ProdutosPage() {
             </div>
 
             {/* Create product dialog */}
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <Dialog open={createOpen} onOpenChange={(open) => {
+                setCreateOpen(open);
+                if (!open) setMessage(null);
+            }}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Cadastrar produto</DialogTitle>
@@ -275,6 +278,17 @@ export default function ProdutosPage() {
                             Preencha os dados do novo produto.
                         </DialogDescription>
                     </DialogHeader>
+                    {message ? (
+                        <div
+                            className={`rounded-lg px-4 py-3 text-sm font-semibold ${
+                                message.type === "error"
+                                    ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
+                                    : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200"
+                            }`}
+                        >
+                            {message.text}
+                        </div>
+                    ) : null}
                     <div className="grid gap-4">
                         <label className="grid gap-1 text-sm font-semibold">
                             Nome
@@ -326,12 +340,26 @@ export default function ProdutosPage() {
             </Dialog>
 
             {/* Edit product dialog */}
-            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <Dialog open={editOpen} onOpenChange={(open) => {
+                setEditOpen(open);
+                if (!open) setMessage(null);
+            }}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Editar produto</DialogTitle>
                         <DialogDescription>Altere os dados do produto.</DialogDescription>
                     </DialogHeader>
+                    {message ? (
+                        <div
+                            className={`rounded-lg px-4 py-3 text-sm font-semibold ${
+                                message.type === "error"
+                                    ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
+                                    : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200"
+                            }`}
+                        >
+                            {message.text}
+                        </div>
+                    ) : null}
                     <div className="grid gap-4">
                         <label className="grid gap-1 text-sm font-semibold">
                             Nome

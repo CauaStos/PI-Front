@@ -1,5 +1,7 @@
 import type { BoardData } from "@pi/contracts"
 
+export { BoardData }
+
 export type {
   Employee,
   EmployeeRole,

@@ -12,7 +12,10 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<AuthGuard />}>
         <Route path="/" element={<Navigate to="/comandas" replace />} />
-        <Route path="/dashboard" element={<Navigate to="/comandas" replace />} />
+        <Route
+          path="/dashboard"
+          element={<Navigate to="/comandas" replace />}
+        />
         <Route path="/comandas" element={<ComandasPage />} />
         <Route path="/produtos" element={<ProdutosPage />} />
         <Route path="/musicas" element={<MusicasPage />} />

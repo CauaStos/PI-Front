@@ -55,9 +55,11 @@ import type {
     ComandaOrder,
     OrderStatus,
     Song,
+    TabStatus,
 } from "@/data/comanda-board"
 
 type BoardData = ComandaBoardData
+type UiStatus = OrderStatus | TabStatus
 type Comanda = BoardData["comandas"][number]
 type HistoryComanda = {
     id: string
@@ -88,7 +90,7 @@ type PendingAction =
     | { type: "remover-pedidos"; orders: ComandaOrder[] }
     | null
 
-const comandaStatusLabel: Record<OrderStatus, string> = {
+const comandaStatusLabel: Record<UiStatus, string> = {
     open: "Aberta",
     in_progress: "Em Andamento",
     delivered: "Entregue",
@@ -96,7 +98,7 @@ const comandaStatusLabel: Record<OrderStatus, string> = {
     cancelled: "Cancelada",
 }
 
-const orderStatusLabel: Record<OrderStatus, string> = {
+const orderStatusLabel: Record<UiStatus, string> = {
     open: "Aberto",
     in_progress: "Em Andamento",
     delivered: "Entregue",
@@ -104,7 +106,7 @@ const orderStatusLabel: Record<OrderStatus, string> = {
     cancelled: "Cancelado",
 }
 
-const orderStatusOptions: OrderStatus[] = [
+const orderStatusOptions: UiStatus[] = [
     "open",
     "in_progress",
     "delivered",
@@ -115,7 +117,7 @@ const orderStatusOptions: OrderStatus[] = [
 const completedOrderStatuses = new Set<OrderStatus>(["delivered", "finished"])
 const cashTimeZone = "America/Sao_Paulo"
 
-const statusClass: Record<OrderStatus, string> = {
+const statusClass: Record<UiStatus, string> = {
     open: "bg-zinc-100 text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-200",
     in_progress: "bg-pink-200 text-pink-900 hover:bg-pink-200",
     delivered: "bg-cyan-200 text-cyan-950 hover:bg-cyan-200",
@@ -123,7 +125,7 @@ const statusClass: Record<OrderStatus, string> = {
     cancelled: "bg-red-200 text-red-950 hover:bg-red-200",
 }
 
-const comandaHeaderClass: Record<OrderStatus, string> = {
+const comandaHeaderClass: Record<UiStatus, string> = {
     open: "bg-zinc-200 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-50",
     in_progress: "bg-pink-200 text-pink-950",
     delivered: "bg-cyan-200 text-cyan-950",
@@ -1123,7 +1125,9 @@ function StatusSelector({
                 </Badge>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-40">
-                {orderStatusOptions.map((status) => (
+                {orderStatusOptions
+                    .filter((status): status is OrderStatus => status !== "open")
+                    .map((status) => (
                     <DropdownMenuItem
                         key={status}
                         onClick={() => onStatusChange(order, status)}
@@ -1132,7 +1136,7 @@ function StatusSelector({
                         {status === order.status ? <Check className="size-4" /> : null}
                         {orderStatusLabel[status]}
                     </DropdownMenuItem>
-                ))}
+                    ))}
             </DropdownMenuContent>
         </DropdownMenu>
     )
@@ -1395,7 +1399,7 @@ function canDeleteOrder(order: ComandaOrder) {
 }
 
 function canEditOrder(order: ComandaOrder) {
-    return order.status === "open" || order.status === "in_progress"
+    return order.status === "in_progress"
 }
 
 function canCancelOrder(order: ComandaOrder) {

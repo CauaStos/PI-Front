@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@pi/contracts": "github:CauaStos/PI-Backend#npm/contracts",
     "@tailwindcss/vite": "^4.3.0",
     "better-auth": "^1.7.2",
     "class-variance-authority": "^0.7.1",

@@ -10,4 +10,26 @@ export default defineConfig({
       "@": path.resolve(__dirname, "."),
     },
   },
+  server: {
+    host: "0.0.0.0",
+    port: 5173,
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      "100.111.246.78",
+      "laptop.neko-bortle.ts.net",
+      "*.ts.net",
+    ],
+    hmr: {
+      protocol: "ws",
+      host: "100.111.246.78",
+      port: 5173,
+    },
+    proxy: {
+      "/api": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+      },
+    },
+  },
 })

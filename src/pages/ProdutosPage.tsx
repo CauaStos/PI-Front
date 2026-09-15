@@ -13,10 +13,17 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { api } from "@/lib/api"
+import { authClient } from "@/lib/auth-client"
 import { format as formatMoney, parseInput } from "@/lib/money"
 import type { Product } from "@/src/data/comanda-board"
 
 export default function ProdutosPage() {
+    const { data: session } = authClient.useSession()
+    const currentUser = session?.user as
+        | { role?: string; employeeRole?: string }
+        | undefined
+    const isAdmin =
+        currentUser?.employeeRole === "admin" || currentUser?.role === "admin"
     const [products, setProducts] = useState<Product[]>([])
     const [selected, setSelected] = useState<Product | null>(null)
     const [loading, setLoading] = useState(true)
@@ -175,12 +182,14 @@ export default function ProdutosPage() {
             <div className="mx-auto max-w-[1160px]">
                 <div className="mb-6 flex items-center justify-between gap-4">
                     <h1 className="text-[22px] font-bold tracking-normal">Produtos</h1>
-                    <Button
-                        className="bg-purple-300 text-purple-950 ring-4 ring-purple-100 hover:bg-purple-400"
-                        onClick={() => setCreateOpen(true)}
-                    >
-                        <Plus className="size-4" /> Cadastrar Produto
-                    </Button>
+                    {isAdmin ? (
+                        <Button
+                            className="bg-purple-300 text-purple-950 ring-4 ring-purple-100 hover:bg-purple-400"
+                            onClick={() => setCreateOpen(true)}
+                        >
+                            <Plus className="size-4" /> Cadastrar Produto
+                        </Button>
+                    ) : null}
                 </div>
 
                 {message && !createOpen && !editOpen ? (
@@ -249,19 +258,23 @@ export default function ProdutosPage() {
                                     {selected.stock} itens no estoque
                                 </p>
                                 <div className="mt-8 grid max-w-52 gap-3">
-                                    <Button
-                                        className="bg-purple-300 text-purple-950 ring-4 ring-purple-100 hover:bg-purple-400"
-                                        onClick={() => openEdit(selected)}
-                                    >
-                                        <Pencil className="size-4" /> Editar Produto
-                                    </Button>
-                                    <Button
-                                        className="bg-red-900 text-white hover:bg-red-950"
-                                        onClick={() => handleDelete(selected)}
-                                        disabled={isMutating}
-                                    >
-                                        <Trash2 className="size-4" /> Remover Produto
-                                    </Button>
+                                    {isAdmin ? (
+                                        <div className="grid gap-3">
+                                            <Button
+                                                className="bg-purple-300 text-purple-950 ring-4 ring-purple-100 hover:bg-purple-400"
+                                                onClick={() => openEdit(selected)}
+                                            >
+                                                <Pencil className="size-4" /> Editar Produto
+                                            </Button>
+                                            <Button
+                                                className="bg-red-900 text-white hover:bg-red-950"
+                                                onClick={() => handleDelete(selected)}
+                                                disabled={isMutating}
+                                            >
+                                                <Trash2 className="size-4" /> Remover Produto
+                                            </Button>
+                                        </div>
+                                    ) : null}
                                 </div>
                             </div>
                             {selected.image ? (
@@ -281,7 +294,7 @@ export default function ProdutosPage() {
             </div>
 
             {/* Create product dialog */}
-            <Dialog open={createOpen} onOpenChange={(open) => {
+            <Dialog open={isAdmin && createOpen} onOpenChange={(open) => {
                 setCreateOpen(open);
                 if (!open) setMessage(null);
             }}>
@@ -377,7 +390,7 @@ export default function ProdutosPage() {
             </Dialog>
 
             {/* Edit product dialog */}
-            <Dialog open={editOpen} onOpenChange={(open) => {
+            <Dialog open={isAdmin && editOpen} onOpenChange={(open) => {
                 setEditOpen(open);
                 if (!open) setMessage(null);
             }}>

@@ -35,5 +35,11 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
     },
+  },
+  {
+    files: ["components/theme-provider.tsx", "components/ui/**/*.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
   }
 )

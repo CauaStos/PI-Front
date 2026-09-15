@@ -29,6 +29,7 @@ export default function ProdutosPage() {
     const [newPrice, setNewPrice] = useState("")
     const [newStock, setNewStock] = useState("0")
     const [newDesc, setNewDesc] = useState("")
+    const [newImage, setNewImage] = useState("")
 
     // Edit dialog
     const [editOpen, setEditOpen] = useState(false)
@@ -97,6 +98,7 @@ export default function ProdutosPage() {
                 price,
                 stock: Number(newStock),
                 description: newDesc.trim(),
+                image: newImage || undefined,
             })
             return "Produto cadastrado."
         })
@@ -106,6 +108,7 @@ export default function ProdutosPage() {
             setNewPrice("")
             setNewStock("0")
             setNewDesc("")
+            setNewImage("")
             setSelected(data.find((p) => p.name === newName.trim()) ?? data[0]!)
         }
     }
@@ -205,7 +208,10 @@ export default function ProdutosPage() {
                                     : "border-zinc-200 dark:border-zinc-800"
                             }`}
                         >
-                            <p className="text-sm font-bold truncate">{product.name}</p>
+                            {product.image ? (
+                                <img src={product.image} alt="" className="mb-3 h-28 w-full rounded-lg object-cover" />
+                            ) : null}
+                            <p className="truncate text-sm font-bold">{product.name}</p>
                             <p className="mt-1 text-xs font-semibold text-zinc-500">
                                 {formatMoney(product.price)}
                             </p>
@@ -258,7 +264,15 @@ export default function ProdutosPage() {
                                     </Button>
                                 </div>
                             </div>
-                            <div className="h-72 rounded-[14px] bg-zinc-200 dark:bg-zinc-800" />
+                            {selected.image ? (
+                                <img
+                                    src={selected.image}
+                                    alt={`Foto de ${selected.name}`}
+                                    className="h-72 w-full rounded-[14px] object-cover"
+                                />
+                            ) : (
+                                <div className="h-72 rounded-[14px] bg-zinc-200 dark:bg-zinc-800" />
+                            )}
                         </CardContent>
                     </Card>
                 ) : (
@@ -326,6 +340,29 @@ export default function ProdutosPage() {
                                 onChange={(e) => setNewDesc(e.target.value)}
                                 placeholder="Descricao do produto"
                             />
+                        </label>
+                        <label className="grid gap-1 text-sm font-semibold">
+                            Foto do produto (opcional)
+                            <input
+                                className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp,image/gif"
+                                onChange={(event) => {
+                                    const file = event.target.files?.[0]
+                                    if (!file) return
+                                    if (file.size > 5 * 1024 * 1024) {
+                                        setMessage({ type: "error", text: "A foto deve ter no maximo 5 MB." })
+                                        event.target.value = ""
+                                        return
+                                    }
+                                    const reader = new FileReader()
+                                    reader.onload = () => setNewImage(String(reader.result))
+                                    reader.readAsDataURL(file)
+                                }}
+                            />
+                            {newImage ? (
+                                <img src={newImage} alt="Prévia da foto" className="h-32 rounded-lg object-cover" />
+                            ) : null}
                         </label>
                     </div>
                     <DialogFooter>

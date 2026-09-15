@@ -23,6 +23,7 @@ export type Product = {
     price: number
     stock: number
     description?: string
+    image?: string
     createdAt: string
 }
 

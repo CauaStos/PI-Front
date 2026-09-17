@@ -8,7 +8,10 @@ import { onBoardChanged } from "@/lib/realtime"
  */
 export function useBoardChanged(onChange: () => void) {
   const cbRef = useRef(onChange)
+
+useEffect(() => {
   cbRef.current = onChange
+}, [onChange])
 
   useEffect(() => {
     let timer: number | undefined

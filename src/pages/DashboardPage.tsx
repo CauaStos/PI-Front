@@ -28,8 +28,9 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    void reload()
-  }, [])
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  void reload()
+}, [])
 
   useBoardChanged(() => {
     void reload()

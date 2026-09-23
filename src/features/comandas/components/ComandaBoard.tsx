@@ -1,4 +1,4 @@
-import { format as formatMoney, parseInput, multiply, sum } from "@/lib/money"
+import { format as formatMoney, multiply, sum } from "@/lib/money"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {

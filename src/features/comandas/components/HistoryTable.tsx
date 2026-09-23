@@ -1,4 +1,4 @@
-import { format as formatMoney, parseInput, multiply, sum } from "@/lib/money"
+import { format as formatMoney } from "@/lib/money"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { ChevronDown } from "lucide-react"
@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import {
-  Comanda,
   HistoryComanda,
   HistoryRow,
   comandaStatusLabel,

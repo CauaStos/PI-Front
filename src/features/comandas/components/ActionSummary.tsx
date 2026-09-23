@@ -1,6 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card"
 import {
-  Comanda,
   PendingAction,
   comandaStatusLabel,
   displayComandaName,

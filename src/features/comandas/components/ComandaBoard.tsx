@@ -10,13 +10,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { ComandaOrder, OrderStatus } from "@/data/comanda-board"
+import type { ComandaOrder, OrderStatus } from "@pi/contracts"
 import { api } from "@/lib/api"
 import { useBoardChanged } from "../hooks/useBoardChanged"
 import { authClient } from "@/lib/auth-client"
+import { useMutate } from "@/lib/use-mutate"
 import { cn } from "@/lib/utils"
 import { History } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   ActionSummary,
   CashPanel,
@@ -60,14 +61,33 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   const [now, setNow] = useState(() => new Date())
   const [selectedId, setSelectedId] = useState(initialData.comandas[0]?.id)
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([])
-  const [message, setMessage] = useState<{
-    type: "success" | "error"
-    text: string
-  } | null>(null)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [editOrder, setEditOrder] = useState<ComandaOrder | null>(null)
-  const [isMutating, setIsMutating] = useState(false)
+
+  const reload = useCallback(async () => {
+    const [tabs, products, employees, songs] = await Promise.all([
+      api.get<BoardData["comandas"]>("/tabs"),
+      api.get<BoardData["products"]>("/products"),
+      api.get<BoardData["employees"]>("/employees"),
+      api.get<BoardData["songs"]>("/songs"),
+    ])
+    const next = { comandas: tabs, products, employees, songs }
+    setBoard(next)
+    return next
+  }, [])
+
+  function afterReload(next: unknown) {
+    const nextBoard = next as BoardData
+    const stillSelected = nextBoard.comandas.some((c) => c.id === selectedId)
+    if (!stillSelected) setSelectedId(nextBoard.comandas[0]?.id)
+    setSelectedOrderIds([])
+  }
+
+  const { isMutating, message, setMessage, mutate } = useMutate(
+    reload,
+    afterReload
+  )
 
   const [productId, setProductId] = useState(initialData.products[0]?.id ?? "")
   const [employeeId, setEmployeeId] = useState(
@@ -137,40 +157,6 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   useBoardChanged(() => {
     void reload()
   })
-
-  async function reload() {
-    const [tabs, products, employees, songs] = await Promise.all([
-      api.get<BoardData["comandas"]>("/tabs"),
-      api.get<BoardData["products"]>("/products"),
-      api.get<BoardData["employees"]>("/employees"),
-      api.get<BoardData["songs"]>("/songs"),
-    ])
-    const next = { comandas: tabs, products, employees, songs }
-    setBoard(next)
-    return next
-  }
-
-  async function mutate(action: () => Promise<string>) {
-    setIsMutating(true)
-    setMessage(null)
-    try {
-      const text = await action()
-      const next = await reload()
-      const stillSelected = next.comandas.some((c) => c.id === selectedId)
-      if (!stillSelected) setSelectedId(next.comandas[0]?.id)
-      setSelectedOrderIds([])
-      setMessage({ type: "success", text })
-      return true
-    } catch (err) {
-      setMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "Operacao falhou.",
-      })
-      return false
-    } finally {
-      setIsMutating(false)
-    }
-  }
 
   async function createComanda() {
     await mutate(async () => {

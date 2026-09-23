@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react"
 import { ComandaBoard } from "@/features/comandas/components/ComandaBoard"
-import type { ComandaBoardData } from "@/data/comanda-board"
+import type { BoardData } from "@pi/contracts"
 import { api } from "@/lib/api"
 
 export function ComandasPage() {
-  const [data, setData] = useState<ComandaBoardData | null>(null)
+  const [data, setData] = useState<BoardData | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
       try {
         const [tabs, products, employees, songs] = await Promise.all([
-          api.get<ComandaBoardData["comandas"]>("/tabs"),
-          api.get<ComandaBoardData["products"]>("/products"),
-          api.get<ComandaBoardData["employees"]>("/employees"),
-          api.get<ComandaBoardData["songs"]>("/songs"),
+          api.get<BoardData["comandas"]>("/tabs"),
+          api.get<BoardData["products"]>("/products"),
+          api.get<BoardData["employees"]>("/employees"),
+          api.get<BoardData["songs"]>("/songs"),
         ])
         setData({ comandas: tabs, products, employees, songs })
       } catch (err) {

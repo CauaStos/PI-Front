@@ -13,7 +13,7 @@ import {
   getDayKey,
   isClosedOnDay,
 } from "@/features/comandas/shared"
-import type { BoardData } from "@/data/comanda-board"
+import type { BoardData } from "@pi/contracts"
 
 export default function DashboardPage() {
   const [board, setBoard] = useState<BoardData | null>(null)

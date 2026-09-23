@@ -1,12 +1,12 @@
 import { sum, multiply } from "@/lib/money"
 import type {
-  ComandaBoardData,
+  BoardData,
   ComandaOrder,
   OrderStatus,
   TabStatus,
-} from "@/data/comanda-board"
+} from "@pi/contracts"
 
-export type BoardData = ComandaBoardData
+export type { BoardData }
 export type UiStatus = OrderStatus | TabStatus
 export type Comanda = BoardData["comandas"][number]
 export type HistoryComanda = {

@@ -23,7 +23,7 @@ import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { authClient } from "@/lib/auth-client"
 import { format as formatMoney, parseInput } from "@/lib/money"
-import type { Product } from "@/data/comanda-board"
+import type { Product } from "@pi/contracts"
 
 export default function ProdutosPage() {
   const { data: session } = authClient.useSession()

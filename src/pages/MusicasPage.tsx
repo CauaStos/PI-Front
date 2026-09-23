@@ -22,7 +22,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { api } from "@/lib/api"
-import type { Comanda, Song } from "@/data/comanda-board"
+import { displayComandaName, formatDate } from "@/features/comandas/shared"
+import type { Comanda, Song } from "@pi/contracts"
 
 type PendingAction = { type: "advance" } | { type: "cancel"; song: Song } | null
 
@@ -353,17 +354,4 @@ export default function MusicasPage() {
       </Dialog>
     </main>
   )
-}
-
-function displayComandaName(name: string) {
-  return name.replace(/^Mesa\s*/i, "Comanda ")
-}
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date))
 }

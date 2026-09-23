@@ -1,5 +1,5 @@
 import { api } from "@/lib/api"
-import type { BoardData } from "@/data/comanda-board"
+import type { BoardData } from "@pi/contracts"
 
 export async function fetchBoard(): Promise<BoardData> {
   const [comandas, products, employees, songs] = await Promise.all([

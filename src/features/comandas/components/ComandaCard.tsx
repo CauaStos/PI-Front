@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { Song } from "@/data/comanda-board"
+import type { Song } from "@pi/contracts"
 import { cn } from "@/lib/utils"
 import {
   Comanda,

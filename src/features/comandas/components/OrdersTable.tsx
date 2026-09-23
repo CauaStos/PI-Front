@@ -2,7 +2,7 @@ import { MemberAvatar } from "./ComandaCard"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Check, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react"
-import type { ComandaOrder, OrderStatus } from "@/data/comanda-board"
+import type { ComandaOrder, OrderStatus } from "@pi/contracts"
 import {
   DropdownMenu,
   DropdownMenuContent,

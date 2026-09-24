@@ -71,7 +71,7 @@ describe("regras de status", () => {
   })
 
   it("cancelar bloqueia cancelado e concluido", () => {
-    expect(canCancelOrder(mkOrder({ status: "open" }))).toBe(true)
+    expect(canCancelOrder(mkOrder({ status: "in_progress" }))).toBe(true)
     expect(canCancelOrder(mkOrder({ status: "cancelled" }))).toBe(false)
     expect(canCancelOrder(mkOrder({ status: "finished" }))).toBe(false)
   })

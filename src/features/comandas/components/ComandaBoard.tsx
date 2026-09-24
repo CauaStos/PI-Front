@@ -1,25 +1,13 @@
-import { format as formatMoney, multiply, sum } from "@/lib/money"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ComandaOrder, OrderStatus } from "@pi/contracts"
 import { api } from "@/lib/api"
 import { useBoardChanged } from "../hooks/useBoardChanged"
 import { authClient } from "@/lib/auth-client"
 import { useMutate } from "@/lib/use-mutate"
-import { cn } from "@/lib/utils"
 import { History } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import {
-  ActionSummary,
   CashPanel,
   ComandaCard,
   CreateComandaCard,
@@ -27,24 +15,24 @@ import {
   OrdersTable,
   QrCodeSlot,
 } from "."
+import { AddOrderDialog } from "./AddOrderDialog"
+import { ConfirmActionDialog } from "./ConfirmActionDialog"
+import { EditOrderDialog } from "./EditOrderDialog"
 import {
   BoardData,
-  Comanda,
   PendingAction,
   billableOrderCount,
   buildHistoryRows,
+  calcComandaTotal,
   canCancelOrder,
   canDeleteOrder,
   canEditOrder,
   displayComandaName,
   formatCashDate,
   formatDate,
-  getActionDescription,
-  getActionTitle,
+  isTabActive,
   getDayKey,
   isClosedOnDay,
-  isPendingActionEmpty,
-  isTabActive,
   isVisibleInToday,
   nextComandaName,
 } from "../shared"
@@ -89,16 +77,6 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     afterReload
   )
 
-  const [productId, setProductId] = useState(initialData.products[0]?.id ?? "")
-  const [employeeId, setEmployeeId] = useState(
-    initialData.employees[0]?.id ?? ""
-  )
-  const [quantity, setQuantity] = useState(1)
-
-  const [editProductId, setEditProductId] = useState("")
-  const [editEmployeeId, setEditEmployeeId] = useState("")
-  const [editQuantity, setEditQuantity] = useState(1)
-
   const comandas = board.comandas
   const todayKey = getDayKey(now)
   const todayComandas = comandas.filter((comanda) =>
@@ -106,7 +84,6 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   )
   const selected =
     todayComandas.find((c) => c.id === selectedId) ?? todayComandas[0]
-  const productOptions = board.products
   const activeComandas = comandas.filter(
     (c) => c.status !== "finished" && c.status !== "cancelled"
   )
@@ -114,27 +91,15 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     (c) => c.status === "finished" && isClosedOnDay(c, todayKey)
   )
   const cashOrders = finishedToday.reduce((s, c) => s + c.orders.length, 0)
-  const cashRevenue = finishedToday.reduce((s, c) => s + calcTotal(c), 0)
+  const cashRevenue = finishedToday.reduce(
+    (s, c) => s + calcComandaTotal(c),
+    0
+  )
   const historyRows = buildHistoryRows(comandas)
   const selectedOrders =
     selected?.orders.filter((order) => selectedOrderIds.includes(order.id)) ??
     []
   const selectedActive = selected ? isTabActive(selected) : false
-
-  const selectedProduct = board.products.find((p) => p.id === productId)
-  const addQuantityValid =
-    Number.isInteger(quantity) &&
-    quantity >= 1 &&
-    !!selectedProduct &&
-    quantity <= selectedProduct.stock
-
-  const editProduct = board.products.find((p) => p.id === editProductId)
-  const editProductChanged = !!editOrder && editProductId !== editOrder.product
-  const editQuantityValid =
-    Number.isInteger(editQuantity) &&
-    editQuantity >= 1 &&
-    !!editProduct &&
-    (!editProductChanged || editQuantity <= editProduct.stock)
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 60_000)
@@ -144,14 +109,6 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   function selectComanda(id: string) {
     setSelectedId(id)
     setSelectedOrderIds([])
-  }
-
-  function calcTotal(comanda: Comanda): number {
-    return sum(
-      comanda.orders
-        .filter((o) => o.status !== "cancelled")
-        .map((o) => multiply(o.unitPrice, o.quantity))
-    )
   }
 
   useBoardChanged(() => {
@@ -167,103 +124,77 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     })
   }
 
-  async function addOrder() {
-    if (!selected) return
+  async function addOrder(payload: {
+    product: string
+    employee: string
+    quantity: number
+  }): Promise<boolean> {
+    if (!selected) return false
     if (!isTabActive(selected)) {
       setMessage({
         type: "error",
         text: "Esta comanda esta finalizada ou cancelada e nao aceita novos pedidos.",
       })
-      return
-    }
-    const product = board.products.find((p) => p.id === productId)
-    if (!product) {
-      setMessage({ type: "error", text: "Selecione um produto valido." })
-      return
-    }
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      setMessage({
-        type: "error",
-        text: "Informe uma quantidade valida (minimo 1).",
-      })
-      return
-    }
-    if (quantity > product.stock) {
-      setMessage({
-        type: "error",
-        text: `Estoque insuficiente para ${product.name}. Disponivel: ${product.stock}.`,
-      })
-      return
+      return false
     }
     const ok = await mutate(async () => {
       await api.post("/orders", {
         tab: selected.id,
-        product: productId,
-        employee: employeeId,
-        quantity,
+        product: payload.product,
+        employee: payload.employee,
+        quantity: payload.quantity,
       })
       return "Pedido adicionado."
     })
-    if (ok) {
-      setAddOpen(false)
-      setQuantity(1)
-    }
+    if (ok) setAddOpen(false)
+    return ok
   }
 
-  function openEditDialog(order: ComandaOrder) {
-    setEditOrder(order)
-    setEditProductId(order.product)
-    setEditEmployeeId(order.employee)
-    setEditQuantity(order.quantity)
-  }
-
-  async function saveEditOrder() {
-    if (!editOrder) return
+  async function saveEditOrder(
+    order: ComandaOrder,
+    payload: { product: string; employee: string; quantity: number }
+  ): Promise<boolean> {
     if (selected && !isTabActive(selected)) {
       setMessage({
         type: "error",
         text: "Comanda finalizada ou cancelada nao permite editar pedidos.",
       })
-      return
+      return false
     }
-    if (!canEditOrder(editOrder)) {
+    if (!canEditOrder(order)) {
       setMessage({
         type: "error",
         text: "Pedidos entregues, concluidos ou cancelados nao podem ser editados.",
       })
-      return
+      return false
     }
-    const product = board.products.find((p) => p.id === editProductId)
+    const product = board.products.find((p) => p.id === payload.product)
     if (!product) {
       setMessage({ type: "error", text: "Selecione um produto valido." })
-      return
+      return false
     }
-    if (!Number.isInteger(editQuantity) || editQuantity < 1) {
-      setMessage({
-        type: "error",
-        text: "Informe uma quantidade valida (minimo 1).",
-      })
-      return
-    }
-    if (editProductId !== editOrder.product && editQuantity > product.stock) {
+    if (
+      payload.product !== order.product &&
+      payload.quantity > product.stock
+    ) {
       setMessage({
         type: "error",
         text: `Estoque insuficiente para ${product.name}. Disponivel: ${product.stock}.`,
       })
-      return
+      return false
     }
     const ok = await mutate(async () => {
-      await api.patch(`/orders/${editOrder.id}`, {
-        product:
-          editProductId !== editOrder.product ? editProductId : undefined,
+      await api.patch(`/orders/${order.id}`, {
+        product: payload.product !== order.product ? payload.product : undefined,
         employee:
-          editEmployeeId !== editOrder.employee ? editEmployeeId : undefined,
+          payload.employee !== order.employee ? payload.employee : undefined,
         quantity:
-          editQuantity !== editOrder.quantity ? editQuantity : undefined,
+          payload.quantity !== order.quantity ? payload.quantity : undefined,
       })
       return "Pedido editado."
     })
     if (ok) setEditOrder(null)
+    return ok
   }
 
   async function updateOrderStatus(order: ComandaOrder, status: OrderStatus) {
@@ -448,7 +379,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                   isMutating={isMutating}
                   onSelectedIdsChange={setSelectedOrderIds}
                   onAdd={() => setAddOpen(true)}
-                  onEdit={openEditDialog}
+                  onEdit={setEditOrder}
                   onCancel={cancelOrder}
                   onStatusChange={updateOrderStatus}
                   canManageOrders={canManageOrders}
@@ -471,182 +402,34 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
         </section>
       </div>
 
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adicionar pedido</DialogTitle>
-            <DialogDescription>
-              Selecione produto, funcionario responsavel e quantidade para{" "}
-              {selected ? displayComandaName(selected.tableName) : "a comanda"}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <label className="grid gap-1 text-sm font-semibold">
-              Produto
-              <select
-                className="h-9 rounded-lg border border-input bg-background px-3"
-                value={productId}
-                onChange={(e) => setProductId(e.target.value)}
-              >
-                {productOptions.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} - {formatMoney(p.price)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm font-semibold">
-              Funcionario
-              <select
-                className="h-9 rounded-lg border border-input bg-background px-3"
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-              >
-                {board.employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm font-semibold">
-              Quantidade
-              <input
-                className="h-9 rounded-lg border border-input bg-background px-3"
-                min={1}
-                max={selectedProduct?.stock}
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-              />
-              {selectedProduct ? (
-                <span className="text-xs font-medium text-muted-foreground">
-                  {selectedProduct.stock} em estoque
-                  {quantity > selectedProduct.stock
-                    ? " - quantidade acima do disponivel"
-                    : ""}
-                </span>
-              ) : null}
-            </label>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={addOrder}
-              disabled={isMutating || !selectedActive || !addQuantityValid}
-            >
-              {isMutating ? "Salvando..." : "Adicionar pedido"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddOrderDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        products={board.products}
+        employees={board.employees}
+        comandaName={selected?.tableName}
+        selectedActive={selectedActive}
+        isMutating={isMutating}
+        setMessage={setMessage}
+        onSubmit={addOrder}
+      />
 
-      <Dialog
-        open={editOrder !== null}
-        onOpenChange={(open) => !open && setEditOrder(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar pedido</DialogTitle>
-            <DialogDescription>
-              Altere produto, funcionario ou quantidade do pedido.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <label className="grid gap-1 text-sm font-semibold">
-              Produto
-              <select
-                className="h-9 rounded-lg border border-input bg-background px-3"
-                value={editProductId}
-                onChange={(e) => setEditProductId(e.target.value)}
-              >
-                {board.products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} - {formatMoney(p.price)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm font-semibold">
-              Funcionario
-              <select
-                className="h-9 rounded-lg border border-input bg-background px-3"
-                value={editEmployeeId}
-                onChange={(e) => setEditEmployeeId(e.target.value)}
-              >
-                {board.employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm font-semibold">
-              Quantidade
-              <input
-                className="h-9 rounded-lg border border-input bg-background px-3"
-                min={1}
-                max={editProductChanged ? editProduct?.stock : undefined}
-                type="number"
-                value={editQuantity}
-                onChange={(e) => setEditQuantity(Number(e.target.value))}
-              />
-              {editProductChanged && editProduct ? (
-                <span className="text-xs font-medium text-muted-foreground">
-                  {editProduct.stock} em estoque
-                  {editQuantity > editProduct.stock
-                    ? " - quantidade acima do disponivel"
-                    : ""}
-                </span>
-              ) : null}
-            </label>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOrder(null)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={saveEditOrder}
-              disabled={isMutating || !editQuantityValid}
-            >
-              {isMutating ? "Salvando..." : "Salvar alteracoes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditOrderDialog
+        order={editOrder}
+        products={board.products}
+        employees={board.employees}
+        isMutating={isMutating}
+        setMessage={setMessage}
+        onSubmit={saveEditOrder}
+        onClose={() => setEditOrder(null)}
+      />
 
-      <Dialog
-        open={pendingAction !== null}
-        onOpenChange={(open) => !open && setPendingAction(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{getActionTitle(pendingAction)}</DialogTitle>
-            <DialogDescription>
-              {getActionDescription(pendingAction)}
-            </DialogDescription>
-          </DialogHeader>
-          <ActionSummary action={pendingAction} />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingAction(null)}>
-              Voltar
-            </Button>
-            <Button
-              onClick={confirmPendingAction}
-              disabled={isMutating || isPendingActionEmpty(pendingAction)}
-              className={cn(
-                (pendingAction?.type === "cancelar-comanda" ||
-                  pendingAction?.type === "remover-pedidos") &&
-                  "bg-red-900 text-white hover:bg-red-950"
-              )}
-            >
-              {isMutating ? "Processando..." : "Confirmar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmActionDialog
+        action={pendingAction}
+        isMutating={isMutating}
+        onConfirm={confirmPendingAction}
+        onClose={() => setPendingAction(null)}
+      />
     </main>
   )
 }

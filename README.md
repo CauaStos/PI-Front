@@ -1,13 +1,13 @@
 # PI Frontend
 
-Interface web do Projeto Interdisciplinar, feita com React e Vite.
+Front do OnStage (Projeto Interdisciplinar): React + Vite + shadcn/ui.
 
 ## Requisitos
 
-- Node.js 22 ou superior
-- Backend em execucao
+- Node.js 22+
+- pi-backend rodando
 
-## Rodando localmente
+## Para rodar
 
 ```bash
 npm install
@@ -15,33 +15,19 @@ cp .env.example .env
 npm run dev
 ```
 
-Abra `http://localhost:5173`. Antes de iniciar, confira se `VITE_API_URL` no
-`.env` aponta para a API correta.
+Depois, é só abrir o `http://localhost:5173`.
+
+Sem `VITE_API_URL` no `.env` ele vai usar o proxy do próprio Vite pro `http://localhost:3000`. Ou seja, se o back estiver na porta padrão, não precisa configurar nada. Só mude essa env se a API estivar rodando em outra porta.
+
+O app não tem cadastro por padrão. O primeiro login vem do bootstrap-admin do backend (leia o README do pi-backend).
 
 ## Scripts
 
 ```bash
-npm run dev        # inicia o Vite com recarregamento automatico
-npm run build      # gera a versao de producao
-npm start          # visualiza o build de producao
-npm run lint       # verifica o codigo
-npm run typecheck  # verifica os tipos TypeScript
-```
-
-## Adding components
-
-To add components to your app, run the following command:
-
-```bash
-npx shadcn@latest add button
-```
-
-This will place the ui components in the `components` directory.
-
-## Using components
-
-To use the components in your app, import them as follows:
-
-```tsx
-import { Button } from "@/components/ui/button";
+npm run dev
+npm run build
+npm start
+npm run lint
+npm run typecheck
+npm test
 ```

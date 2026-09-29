@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import {
   Mic2,
@@ -5,9 +6,9 @@ import {
   PackageSearch,
   ReceiptText,
 } from "lucide-react"
-import { NavLink, useLocation } from "react-router-dom"
+import { NavLink, useLocation, useNavigate } from "react-router-dom"
 
-import { authClient } from "@/lib/auth-client"
+import { useAuth } from "@/lib/auth"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Sidebar,
@@ -30,9 +31,16 @@ const navItems = [
 
 export function AppSidebar() {
   const { pathname } = useLocation()
-  const { data: session } = authClient.useSession()
-  const user = session?.user
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
+  const [leaving, setLeaving] = useState(false)
   const initials = user?.name?.trim().charAt(0).toUpperCase() || "U"
+
+  async function handleLogout() {
+    setLeaving(true)
+    await logout()
+    navigate("/login", { replace: true })
+  }
 
   return (
     <Sidebar
@@ -99,10 +107,11 @@ export function AppSidebar() {
         </div>
         <button
           type="button"
-          className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
-          onClick={() => void authClient.signOut()}
+          disabled={leaving}
+          className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 disabled:opacity-60 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+          onClick={() => void handleLogout()}
         >
-          Sair
+          {leaving ? "Saindo..." : "Sair"}
         </button>
       </SidebarFooter>
     </Sidebar>

@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: /^@\/(components|lib)\//,
+        find: /^@\/(components|lib|hooks)\//,
         replacement: `${path.resolve(__dirname)}/$1/`,
       },
       { find: /^@\//, replacement: `${path.resolve(__dirname, "src")}/` },

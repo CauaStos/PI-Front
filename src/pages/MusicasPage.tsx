@@ -9,7 +9,6 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { displayComandaName, formatDate } from "@/features/comandas/shared"
 import type { Comanda, Song } from "@pi/contracts"
@@ -32,10 +32,6 @@ export default function MusicasPage() {
   const [tabs, setTabs] = useState<Comanda[]>([])
   const [loading, setLoading] = useState(true)
   const [isMutating, setIsMutating] = useState(false)
-  const [message, setMessage] = useState<{
-    type: "success" | "error"
-    text: string
-  } | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [title, setTitle] = useState("")
@@ -52,13 +48,11 @@ export default function MusicasPage() {
       try {
         await reload()
       } catch (err) {
-        setMessage({
-          type: "error",
-          text:
-            err instanceof Error
-              ? err.message
-              : "Erro ao carregar a fila de musicas.",
-        })
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "Erro ao carregar a fila de musicas."
+        )
       } finally {
         setLoading(false)
       }
@@ -80,10 +74,7 @@ export default function MusicasPage() {
   function openAddDialog() {
     const firstTab = activeTabs[0]
     if (!firstTab) {
-      setMessage({
-        type: "error",
-        text: "Abra uma comanda antes de adicionar uma musica.",
-      })
+      toast.error("Abra uma comanda antes de adicionar uma musica.")
       return
     }
 
@@ -96,7 +87,6 @@ export default function MusicasPage() {
     if (!title.trim() || !tabId) return
 
     setIsMutating(true)
-    setMessage(null)
     try {
       const song = await api.post<Song>("/songs", {
         title: title.trim(),
@@ -104,18 +94,13 @@ export default function MusicasPage() {
       })
       await reload()
       setAddOpen(false)
-      setMessage({
-        type: "success",
-        text: `"${song.title}" adicionada na posicao ${song.position}.`,
-      })
+      toast.success(`"${song.title}" adicionada na posicao ${song.position}.`)
     } catch (err) {
-      setMessage({
-        type: "error",
-        text:
-          err instanceof Error
-            ? err.message
-            : "Nao foi possivel adicionar a musica.",
-      })
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Nao foi possivel adicionar a musica."
+      )
     } finally {
       setIsMutating(false)
     }
@@ -125,7 +110,6 @@ export default function MusicasPage() {
     if (!pendingAction) return
 
     setIsMutating(true)
-    setMessage(null)
     try {
       if (pendingAction.type === "advance") {
         const result = await api.post<{ current: Song | null }>(
@@ -133,26 +117,19 @@ export default function MusicasPage() {
           {}
         )
         await reload()
-        setMessage({
-          type: "success",
-          text: result.current
+        toast.success(
+          result.current
             ? `Agora tocando: "${result.current.title}".`
-            : "A musica atual foi finalizada. A fila esta vazia.",
-        })
+            : "A musica atual foi finalizada. A fila esta vazia."
+        )
       } else {
         await api.delete(`/songs/${pendingAction.song.id}`)
         await reload()
-        setMessage({
-          type: "success",
-          text: `"${pendingAction.song.title}" foi cancelada.`,
-        })
+        toast.success(`"${pendingAction.song.title}" foi cancelada.`)
       }
       setPendingAction(null)
     } catch (err) {
-      setMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "Operacao falhou.",
-      })
+      toast.error(err instanceof Error ? err.message : "Operacao falhou.")
     } finally {
       setIsMutating(false)
     }
@@ -182,18 +159,6 @@ export default function MusicasPage() {
             <Plus className="size-4" /> Adicionar musica
           </Button>
         </div>
-
-        {message ? (
-          <Alert
-            className="mb-5"
-            variant={message.type === "error" ? "destructive" : "default"}
-          >
-            <AlertTitle>
-              {message.type === "error" ? "Erro" : "Sucesso"}
-            </AlertTitle>
-            <AlertDescription>{message.text}</AlertDescription>
-          </Alert>
-        ) : null}
 
         <Card className="mb-5 rounded-[18px] shadow-none">
           <CardHeader className="flex-row items-center justify-between gap-4">

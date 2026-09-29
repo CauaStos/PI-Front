@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { MutateMessage } from "@/lib/use-mutate"
 import { EmployeeField, ProductField, QuantityField, StockHint } from "./fields"
 
 export type EditOrderPayload = {
@@ -23,7 +22,6 @@ export function EditOrderDialog({
   products,
   employees,
   isMutating,
-  setMessage,
   onSubmit,
   onClose,
 }: {
@@ -31,17 +29,18 @@ export function EditOrderDialog({
   products: Product[]
   employees: Employee[]
   isMutating: boolean
-  setMessage: (message: MutateMessage | null) => void
   onSubmit: (order: ComandaOrder, payload: EditOrderPayload) => Promise<boolean>
   onClose: () => void
 }) {
   const [productId, setProductId] = useState("")
   const [employeeId, setEmployeeId] = useState("")
   const [quantity, setQuantity] = useState(1)
+  const [error, setError] = useState<string | null>(null)
   const [seededOrder, setSeededOrder] = useState(order)
 
   if (order !== seededOrder) {
     setSeededOrder(order)
+    setError(null)
     if (order) {
       setProductId(order.product)
       setEmployeeId(order.employee)
@@ -59,24 +58,16 @@ export function EditOrderDialog({
 
   async function saveEditOrder() {
     if (!order) return
+    setError(null)
     const product = products.find((p) => p.id === productId)
-    if (!product) {
-      setMessage({ type: "error", text: "Selecione um produto valido." })
-      return
-    }
+    if (!product) return setError("Selecione um produto valido.")
     if (!Number.isInteger(quantity) || quantity < 1) {
-      setMessage({
-        type: "error",
-        text: "Informe uma quantidade valida (minimo 1).",
-      })
-      return
+      return setError("Informe uma quantidade valida (minimo 1).")
     }
     if (productChanged && quantity > product.stock) {
-      setMessage({
-        type: "error",
-        text: `Estoque insuficiente para ${product.name}. Disponivel: ${product.stock}.`,
-      })
-      return
+      return setError(
+        `Estoque insuficiente para ${product.name}. Disponivel: ${product.stock}.`
+      )
     }
     await onSubmit(order, {
       product: productId,
@@ -115,6 +106,11 @@ export function EditOrderDialog({
               ) : null
             }
           />
+          {error ? (
+            <p role="alert" className="text-sm font-semibold text-red-600">
+              {error}
+            </p>
+          ) : null}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

@@ -5,6 +5,7 @@ import {
   Music,
   PackageSearch,
   ReceiptText,
+  UserRound,
 } from "lucide-react"
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
 
@@ -33,6 +34,23 @@ export function AppSidebar() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const authUser = user as
+    | { role?: string; employeeRole?: string }
+    | null
+    | undefined
+  const employeeRole =
+    authUser?.employeeRole ??
+    (authUser?.role === "admin" ? "ADMIN" : undefined)
+  const canManageEmployees =
+    employeeRole === "admin" ||
+    employeeRole === "ADMIN" ||
+    employeeRole === "GERENTE"
+  const visibleNavItems = canManageEmployees
+    ? [
+        ...navItems,
+        { label: "Funcionários", href: "/funcionarios", icon: UserRound },
+      ]
+    : navItems
   const [leaving, setLeaving] = useState(false)
   const initials = user?.name?.trim().charAt(0).toUpperCase() || "U"
 
@@ -61,7 +79,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => {
+              {visibleNavItems.map((item) => {
                 const Icon = item.icon
                 const active =
                   pathname === item.href ||

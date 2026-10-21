@@ -4,6 +4,7 @@ import { ComandasPage } from "@/pages/ComandasPage"
 import DashboardPage from "@/pages/DashboardPage"
 import MusicasPage from "@/pages/MusicasPage"
 import ProdutosPage from "@/pages/ProdutosPage"
+import FuncionariosPage from "@/pages/FuncionariosPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage"
@@ -30,6 +31,7 @@ export function AppRoutes() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/comandas" element={<ComandasPage />} />
         <Route path="/produtos" element={<ProdutosPage />} />
+        <Route path="/funcionarios" element={<FuncionariosPage />} />
         <Route path="/musicas" element={<MusicasPage />} />
         <Route path="*" element={<Navigate to="/comandas" replace />} />
       </Route>

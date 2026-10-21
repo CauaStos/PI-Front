@@ -23,24 +23,11 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { api } from "@/lib/api"
-
-type EmployeeRole =
-  | "admin"
-  | "garcom"
-  | "cozinha"
-  | "ADMIN"
-  | "GERENTE"
-  | "OPERADOR"
-  | "CLIENTE"
-
-type Employee = {
-  id: string
-  name: string
-  email: string
-  role: EmployeeRole
-  avatar: string
-  createdAt?: string
-}
+import {
+  isAdminEmployeeRole,
+  type Employee,
+  type EmployeeRole,
+} from "@/lib/employee-roles"
 
 type EmployeeForm = {
   name: string
@@ -58,10 +45,6 @@ const roleOptions: { value: EmployeeRole; label: string }[] = [
   { value: "garcom", label: "Garçom (legado)" },
   { value: "cozinha", label: "Cozinha (legado)" },
 ]
-
-function isAdminRole(role: EmployeeRole) {
-  return role === "admin" || role === "ADMIN"
-}
 
 function roleLabel(role: EmployeeRole) {
   return (
@@ -91,7 +74,9 @@ export default function FuncionariosPage() {
   const [editing, setEditing] = useState<Employee | null>(null)
   const [form, setForm] = useState<EmployeeForm>(emptyForm)
 
-  const isAdmin = currentEmployee ? isAdminRole(currentEmployee.role) : false
+  const isAdmin = currentEmployee
+    ? isAdminEmployeeRole(currentEmployee.role)
+    : false
   const isManager = currentEmployee?.role === "GERENTE"
   const canManage = isAdmin || isManager
 

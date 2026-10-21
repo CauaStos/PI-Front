@@ -10,6 +10,7 @@ import {
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/lib/auth"
+import { canAccessEmployeeManagement } from "@/lib/employee-roles"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Sidebar,
@@ -42,9 +43,8 @@ export function AppSidebar() {
     authUser?.employeeRole ??
     (authUser?.role === "admin" ? "ADMIN" : undefined)
   const canManageEmployees =
-    employeeRole === "admin" ||
-    employeeRole === "ADMIN" ||
-    employeeRole === "GERENTE"
+    employeeRole !== undefined &&
+    canAccessEmployeeManagement(employeeRole)
   const visibleNavItems = canManageEmployees
     ? [
         ...navItems,

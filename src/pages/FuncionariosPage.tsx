@@ -182,7 +182,9 @@ export default function FuncionariosPage() {
     setSaving(true)
     try {
       if (editing) {
-        await api.patch(`/employees/${editing.id}`, {
+        const employeePath =
+          isAdmin || !isManager ? `/employees/${editing.id}` : "/employees/me"
+        await api.patch(employeePath, {
           name: form.name.trim(),
           ...(isAdmin ? { email: form.email.trim(), role: form.role } : {}),
           avatar: form.avatar.trim(),
@@ -320,7 +322,10 @@ export default function FuncionariosPage() {
                       key={employee.id}
                       employee={employee}
                       isCurrent={employee.id === currentEmployee?.id}
-                      canEdit={isAdmin || isManager}
+                      canEdit={
+                        isAdmin ||
+                        (isManager && employee.id === currentEmployee?.id)
+                      }
                       canDelete={isAdmin}
                       disabled={saving}
                       onEdit={openEdit}
@@ -365,15 +370,19 @@ export default function FuncionariosPage() {
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openEdit(employee)}
-                                disabled={saving}
-                              >
-                                <Pencil className="size-3.5" />
-                                Editar
-                              </Button>
+                              {isAdmin ||
+                              (isManager &&
+                                employee.id === currentEmployee?.id) ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openEdit(employee)}
+                                  disabled={saving}
+                                >
+                                  <Pencil className="size-3.5" />
+                                  Editar
+                                </Button>
+                              ) : null}
                               {isAdmin ? (
                                 <Button
                                   variant="destructive"

@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { MutateMessage } from "@/lib/use-mutate"
 import { displayComandaName } from "../shared"
 import { EmployeeField, ProductField, QuantityField, StockHint } from "./fields"
 
@@ -27,7 +26,6 @@ export function AddOrderDialog({
   comandaName,
   selectedActive,
   isMutating,
-  setMessage,
   onSubmit,
 }: {
   open: boolean
@@ -37,12 +35,12 @@ export function AddOrderDialog({
   comandaName: string | undefined
   selectedActive: boolean
   isMutating: boolean
-  setMessage: (message: MutateMessage | null) => void
   onSubmit: (payload: AddOrderPayload) => Promise<boolean>
 }) {
   const [productId, setProductId] = useState(products[0]?.id ?? "")
   const [employeeId, setEmployeeId] = useState(employees[0]?.id ?? "")
   const [quantity, setQuantity] = useState(1)
+  const [error, setError] = useState<string | null>(null)
 
   const selectedProduct = products.find((p) => p.id === productId)
   const quantityValid =
@@ -52,24 +50,16 @@ export function AddOrderDialog({
     quantity <= selectedProduct.stock
 
   async function addOrder() {
+    setError(null)
     const product = products.find((p) => p.id === productId)
-    if (!product) {
-      setMessage({ type: "error", text: "Selecione um produto valido." })
-      return
-    }
+    if (!product) return setError("Selecione um produto valido.")
     if (!Number.isInteger(quantity) || quantity < 1) {
-      setMessage({
-        type: "error",
-        text: "Informe uma quantidade valida (minimo 1).",
-      })
-      return
+      return setError("Informe uma quantidade valida (minimo 1).")
     }
     if (quantity > product.stock) {
-      setMessage({
-        type: "error",
-        text: `Estoque insuficiente para ${product.name}. Disponivel: ${product.stock}.`,
-      })
-      return
+      return setError(
+        `Estoque insuficiente para ${product.name}. Disponivel: ${product.stock}.`
+      )
     }
     const ok = await onSubmit({
       product: productId,
@@ -80,7 +70,13 @@ export function AddOrderDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setError(null)
+        onOpenChange(next)
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Adicionar pedido</DialogTitle>
@@ -110,6 +106,11 @@ export function AddOrderDialog({
               ) : null
             }
           />
+          {error ? (
+            <p role="alert" className="text-sm font-semibold text-red-600">
+              {error}
+            </p>
+          ) : null}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

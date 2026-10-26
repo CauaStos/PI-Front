@@ -1,34 +1,27 @@
+import { createApiClient, ApiError } from "./api-client"
+import { getValidToken, invalidateToken } from "./auth-token"
+
+// Em produção o front e a API ficam na mesma origem (nginx na 3001, publicado
+// pelo Tailscale Serve); em dev o proxy do Vite cobre /api. VITE_API_URL só é
+// necessária para apontar para um backend externo.
 const BASE =
-  (import.meta.env["VITE_API_URL"] as string | undefined) ??
-  "http://localhost:3000/api/v1"
+  (import.meta.env["VITE_API_URL"] as string | undefined) ?? "/api/v1"
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    ...init,
-  })
+let unauthorizedHandler: (() => void) | null = null
 
-  if (!res.ok) {
-    let message = `HTTP ${res.status}`
-    try {
-      const body = (await res.json()) as { error?: { message?: string } }
-      message = body.error?.message ?? message
-    } catch {
-      // ignore JSON parse error
-    }
-    throw new Error(message)
-  }
-
-  if (res.status === 204) return undefined as T
-  return res.json() as Promise<T>
+/**
+ * Registra o que fazer quando o token nao pode ser renovado (sessao
+ * revogada). O componente raiz conecta isso ao signOut.
+ */
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler
 }
 
-export const api = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: "POST", body: JSON.stringify(body) }),
-  patch: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
-}
+export const api = createApiClient({
+  base: BASE,
+  getToken: getValidToken,
+  invalidate: invalidateToken,
+  onUnauthorized: () => unauthorizedHandler?.(),
+})
+
+export { ApiError }

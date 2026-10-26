@@ -1,6 +1,6 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ComandaOrder, OrderStatus } from "@pi/contracts"
+import { toast } from "sonner"
 import { api } from "@/lib/api"
 import { useBoardChanged } from "../hooks/useBoardChanged"
 import { authClient } from "@/lib/auth-client"
@@ -44,7 +44,9 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     ((session?.user as { role?: string } | undefined)?.role === "admin"
       ? "admin"
       : "garcom")
-  const canManageOrders = employeeRole === "admin" || employeeRole === "garcom"
+  const canManageOrders = ["admin", "ADMIN", "garcom", "OPERADOR"].includes(
+    employeeRole
+  )
   const [board, setBoard] = useState(initialData)
   const [now, setNow] = useState(() => new Date())
   const [selectedId, setSelectedId] = useState(initialData.comandas[0]?.id)
@@ -72,10 +74,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     setSelectedOrderIds([])
   }
 
-  const { isMutating, message, setMessage, mutate } = useMutate(
-    reload,
-    afterReload
-  )
+  const { isMutating, mutate } = useMutate(reload, afterReload)
 
   const comandas = board.comandas
   const todayKey = getDayKey(now)
@@ -131,10 +130,9 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   }): Promise<boolean> {
     if (!selected) return false
     if (!isTabActive(selected)) {
-      setMessage({
-        type: "error",
-        text: "Esta comanda esta finalizada ou cancelada e nao aceita novos pedidos.",
-      })
+      toast.error(
+        "Esta comanda esta finalizada ou cancelada e nao aceita novos pedidos."
+      )
       return false
     }
     const ok = await mutate(async () => {
@@ -155,32 +153,27 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     payload: { product: string; employee: string; quantity: number }
   ): Promise<boolean> {
     if (selected && !isTabActive(selected)) {
-      setMessage({
-        type: "error",
-        text: "Comanda finalizada ou cancelada nao permite editar pedidos.",
-      })
+      toast.error("Comanda finalizada ou cancelada nao permite editar pedidos.")
       return false
     }
     if (!canEditOrder(order)) {
-      setMessage({
-        type: "error",
-        text: "Pedidos entregues, concluidos ou cancelados nao podem ser editados.",
-      })
+      toast.error(
+        "Pedidos entregues, concluidos ou cancelados nao podem ser editados."
+      )
       return false
     }
     const product = board.products.find((p) => p.id === payload.product)
     if (!product) {
-      setMessage({ type: "error", text: "Selecione um produto valido." })
+      toast.error("Selecione um produto valido.")
       return false
     }
     if (
       payload.product !== order.product &&
       payload.quantity > product.stock
     ) {
-      setMessage({
-        type: "error",
-        text: `Estoque insuficiente para ${product.name}. Disponivel: ${product.stock}.`,
-      })
+      toast.error(
+        `Estoque insuficiente para ${product.name}. Disponivel: ${product.stock}.`
+      )
       return false
     }
     const ok = await mutate(async () => {
@@ -200,17 +193,11 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   async function updateOrderStatus(order: ComandaOrder, status: OrderStatus) {
     if (order.status === status) return
     if (selected && !isTabActive(selected)) {
-      setMessage({
-        type: "error",
-        text: "Comanda finalizada ou cancelada nao permite alterar pedidos.",
-      })
+      toast.error("Comanda finalizada ou cancelada nao permite alterar pedidos.")
       return
     }
     if (order.status === "cancelled") {
-      setMessage({
-        type: "error",
-        text: "Um pedido cancelado nao pode mudar de status.",
-      })
+      toast.error("Um pedido cancelado nao pode mudar de status.")
       return
     }
     await mutate(async () => {
@@ -221,10 +208,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
 
   async function cancelOrder(order: ComandaOrder) {
     if (!canCancelOrder(order)) {
-      setMessage({
-        type: "error",
-        text: "Este pedido ja esta cancelado ou concluido.",
-      })
+      toast.error("Este pedido ja esta cancelado ou concluido.")
       return
     }
     await updateOrderStatus(order, "cancelled")
@@ -237,18 +221,12 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     if (pendingAction.type === "finalizar-comanda") {
       if (!isTabActive(pendingAction.comanda)) {
         setPendingAction(null)
-        setMessage({
-          type: "error",
-          text: "Esta comanda ja foi finalizada ou cancelada.",
-        })
+        toast.error("Esta comanda ja foi finalizada ou cancelada.")
         return
       }
       if (billableOrderCount(pendingAction.comanda) === 0) {
         setPendingAction(null)
-        setMessage({
-          type: "error",
-          text: "Nao e possivel finalizar uma comanda sem pedidos ativos.",
-        })
+        toast.error("Nao e possivel finalizar uma comanda sem pedidos ativos.")
         return
       }
       ok = await mutate(async () => {
@@ -262,10 +240,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     if (pendingAction.type === "cancelar-comanda") {
       if (!isTabActive(pendingAction.comanda)) {
         setPendingAction(null)
-        setMessage({
-          type: "error",
-          text: "Esta comanda ja foi finalizada ou cancelada.",
-        })
+        toast.error("Esta comanda ja foi finalizada ou cancelada.")
         return
       }
       ok = await mutate(async () => {
@@ -298,17 +273,6 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
             totalOrders={cashOrders}
             activeComandas={activeComandas.length}
           />
-
-          {message ? (
-            <Alert
-              variant={message.type === "error" ? "destructive" : "default"}
-            >
-              <AlertTitle>
-                {message.type === "error" ? "Erro" : "Sucesso"}
-              </AlertTitle>
-              <AlertDescription>{message.text}</AlertDescription>
-            </Alert>
-          ) : null}
         </section>
 
         <section className="min-w-0">
@@ -410,7 +374,6 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
         comandaName={selected?.tableName}
         selectedActive={selectedActive}
         isMutating={isMutating}
-        setMessage={setMessage}
         onSubmit={addOrder}
       />
 
@@ -419,7 +382,6 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
         products={board.products}
         employees={board.employees}
         isMutating={isMutating}
-        setMessage={setMessage}
         onSubmit={saveEditOrder}
         onClose={() => setEditOrder(null)}
       />

@@ -1,5 +1,9 @@
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpToLine,
   Clock3,
+  GripVertical,
   ListMusic,
   Loader2,
   Music2,
@@ -7,9 +11,8 @@ import {
   SkipForward,
   Trash2,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState, type DragEvent } from "react"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,25 +24,42 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { toast } from "sonner"
 import { api } from "@/lib/api"
+import { authClient } from "@/lib/auth-client"
+import { canManageSongQueue, type Employee } from "@/lib/employee-roles"
+import { cn } from "@/lib/utils"
 import { displayComandaName, formatDate } from "@/features/comandas/shared"
+import { useBoardChanged } from "@/features/comandas/hooks/useBoardChanged"
+import {
+  reorderQueuedSongs,
+  resolveEmployeeRoleFromSession,
+} from "@/features/musicas/queue"
 import type { Comanda, Song } from "@pi/contracts"
 
 type PendingAction = { type: "advance" } | { type: "cancel"; song: Song } | null
 
 export default function MusicasPage() {
+  const { data: session } = authClient.useSession()
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null)
   const [songs, setSongs] = useState<Song[]>([])
   const [tabs, setTabs] = useState<Comanda[]>([])
   const [loading, setLoading] = useState(true)
   const [isMutating, setIsMutating] = useState(false)
-  const [message, setMessage] = useState<{
-    type: "success" | "error"
-    text: string
-  } | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [title, setTitle] = useState("")
   const [tabId, setTabId] = useState("")
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+
+  const sessionRole = resolveEmployeeRoleFromSession(
+    session?.user as { role?: string; employeeRole?: string } | undefined
+  )
+  const effectiveRole = currentEmployee?.role ?? sessionRole
+  const canManageQueue = effectiveRole
+    ? canManageSongQueue(effectiveRole)
+    : false
 
   const activeTabs = tabs.filter(
     (tab) => tab.status === "open" || tab.status === "in_progress"
@@ -47,27 +67,7 @@ export default function MusicasPage() {
   const currentSong = songs.find((song) => song.status === "playing")
   const queuedSongs = songs.filter((song) => song.status === "queued")
 
-  useEffect(() => {
-    async function load() {
-      try {
-        await reload()
-      } catch (err) {
-        setMessage({
-          type: "error",
-          text:
-            err instanceof Error
-              ? err.message
-              : "Erro ao carregar a fila de musicas.",
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    void load()
-  }, [])
-
-  async function reload() {
+  const reload = useCallback(async () => {
     const [nextSongs, nextTabs] = await Promise.all([
       api.get<Song[]>("/songs"),
       api.get<Comanda[]>("/tabs"),
@@ -75,15 +75,51 @@ export default function MusicasPage() {
     setSongs(nextSongs)
     setTabs(nextTabs)
     return nextSongs
-  }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      try {
+        const [nextSongs, nextTabs, profile] = await Promise.all([
+          api.get<Song[]>("/songs"),
+          api.get<Comanda[]>("/tabs"),
+          api.get<Employee>("/employees/me").catch(() => null),
+        ])
+        if (cancelled) return
+        setSongs(nextSongs)
+        setTabs(nextTabs)
+        if (profile) setCurrentEmployee(profile)
+      } catch (err) {
+        if (!cancelled) {
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : "Erro ao carregar a fila de musicas."
+          )
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useBoardChanged(() => {
+    if (!isMutating && !draggingId) {
+      void reload().catch(() => undefined)
+    }
+  })
 
   function openAddDialog() {
     const firstTab = activeTabs[0]
     if (!firstTab) {
-      setMessage({
-        type: "error",
-        text: "Abra uma comanda antes de adicionar uma musica.",
-      })
+      toast.error("Abra uma comanda antes de adicionar uma musica.")
       return
     }
 
@@ -96,7 +132,6 @@ export default function MusicasPage() {
     if (!title.trim() || !tabId) return
 
     setIsMutating(true)
-    setMessage(null)
     try {
       const song = await api.post<Song>("/songs", {
         title: title.trim(),
@@ -104,28 +139,104 @@ export default function MusicasPage() {
       })
       await reload()
       setAddOpen(false)
-      setMessage({
-        type: "success",
-        text: `"${song.title}" adicionada na posicao ${song.position}.`,
-      })
+      toast.success(`"${song.title}" adicionada na posicao ${song.position}.`)
     } catch (err) {
-      setMessage({
-        type: "error",
-        text:
-          err instanceof Error
-            ? err.message
-            : "Nao foi possivel adicionar a musica.",
-      })
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Nao foi possivel adicionar a musica."
+      )
     } finally {
       setIsMutating(false)
     }
+  }
+
+  async function moveSong(songId: string, targetPosition: number) {
+    if (!canManageQueue || isMutating) return
+    const currentIndex = queuedSongs.findIndex((item) => item.id === songId)
+    const targetSong = queuedSongs[currentIndex]
+    if (
+      !targetSong ||
+      currentIndex + 1 === targetPosition ||
+      targetPosition < 1 ||
+      targetPosition > queuedSongs.length
+    ) {
+      return
+    }
+
+    const previousSongs = songs
+    setSongs(reorderQueuedSongs(songs, songId, targetPosition))
+    setIsMutating(true)
+    try {
+      const updatedQueue = await api.patch<Song[]>(
+        `/songs/${songId}/position`,
+        { position: targetPosition }
+      )
+      setSongs(updatedQueue)
+      toast.success(
+        `"${targetSong.title}" movida para a posicao ${targetPosition}.`
+      )
+    } catch (err) {
+      setSongs(previousSongs)
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Nao foi possivel alterar a posicao da musica."
+      )
+    } finally {
+      setIsMutating(false)
+    }
+  }
+
+  function handleDragStart(event: DragEvent<HTMLDivElement>, song: Song) {
+    if (!canManageQueue || isMutating || queuedSongs.length <= 1) {
+      event.preventDefault()
+      return
+    }
+    setDraggingId(song.id)
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData("text/plain", song.id)
+  }
+
+  function handleDragOver(event: DragEvent<HTMLDivElement>, song: Song) {
+    if (!canManageQueue || !draggingId || draggingId === song.id) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = "move"
+    if (dragOverId !== song.id) {
+      setDragOverId(song.id)
+    }
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLDivElement>, song: Song) {
+    if (
+      dragOverId === song.id &&
+      !event.currentTarget.contains(event.relatedTarget as Node | null)
+    ) {
+      setDragOverId(null)
+    }
+  }
+
+  function handleDrop(
+    event: DragEvent<HTMLDivElement>,
+    targetIndex: number
+  ) {
+    event.preventDefault()
+    const sourceId = draggingId || event.dataTransfer.getData("text/plain")
+    setDraggingId(null)
+    setDragOverId(null)
+    if (!sourceId) return
+    void moveSong(sourceId, targetIndex + 1)
+  }
+
+  function handleDragEnd() {
+    setDraggingId(null)
+    setDragOverId(null)
   }
 
   async function confirmAction() {
     if (!pendingAction) return
 
     setIsMutating(true)
-    setMessage(null)
     try {
       if (pendingAction.type === "advance") {
         const result = await api.post<{ current: Song | null }>(
@@ -133,26 +244,19 @@ export default function MusicasPage() {
           {}
         )
         await reload()
-        setMessage({
-          type: "success",
-          text: result.current
+        toast.success(
+          result.current
             ? `Agora tocando: "${result.current.title}".`
-            : "A musica atual foi finalizada. A fila esta vazia.",
-        })
+            : "A musica atual foi finalizada. A fila esta vazia."
+        )
       } else {
         await api.delete(`/songs/${pendingAction.song.id}`)
         await reload()
-        setMessage({
-          type: "success",
-          text: `"${pendingAction.song.title}" foi cancelada.`,
-        })
+        toast.success(`"${pendingAction.song.title}" foi cancelada.`)
       }
       setPendingAction(null)
     } catch (err) {
-      setMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "Operacao falhou.",
-      })
+      toast.error(err instanceof Error ? err.message : "Operacao falhou.")
     } finally {
       setIsMutating(false)
     }
@@ -166,6 +270,8 @@ export default function MusicasPage() {
     )
   }
 
+  const canReorder = canManageQueue && queuedSongs.length > 1
+
   return (
     <main className="min-h-svh bg-background px-10 py-8 text-foreground max-sm:px-5 max-sm:py-5">
       <div className="mx-auto max-w-[960px]">
@@ -175,25 +281,17 @@ export default function MusicasPage() {
               Fila de musicas
             </h1>
             <p className="mt-1 text-sm font-medium text-muted-foreground">
-              Gerencie os pedidos das comandas e a musica em execucao.
+              Gerencie os pedidos das comandas e organize a ordem das musicas.
             </p>
           </div>
-          <Button onClick={openAddDialog} disabled={isMutating}>
-            <Plus className="size-4" /> Adicionar musica
-          </Button>
+          {canManageQueue ? (
+            <Button onClick={openAddDialog} disabled={isMutating}>
+              <Plus className="size-4" /> Adicionar musica
+            </Button>
+          ) : (
+            <Badge variant="outline">Somente visualizacao</Badge>
+          )}
         </div>
-
-        {message ? (
-          <Alert
-            className="mb-5"
-            variant={message.type === "error" ? "destructive" : "default"}
-          >
-            <AlertTitle>
-              {message.type === "error" ? "Erro" : "Sucesso"}
-            </AlertTitle>
-            <AlertDescription>{message.text}</AlertDescription>
-          </Alert>
-        ) : null}
 
         <Card className="mb-5 rounded-[18px] shadow-none">
           <CardHeader className="flex-row items-center justify-between gap-4">
@@ -207,22 +305,31 @@ export default function MusicasPage() {
                   : "Nenhuma musica em execucao."}
               </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setPendingAction({ type: "advance" })}
-              disabled={isMutating || songs.length === 0}
-            >
-              <SkipForward className="size-4" />
-              {currentSong ? "Proxima musica" : "Iniciar proxima"}
-            </Button>
+            {canManageQueue ? (
+              <Button
+                variant="outline"
+                onClick={() => setPendingAction({ type: "advance" })}
+                disabled={isMutating || songs.length === 0}
+              >
+                <SkipForward className="size-4" />
+                {currentSong ? "Proxima musica" : "Iniciar proxima"}
+              </Button>
+            ) : null}
           </CardHeader>
         </Card>
 
         <section>
-          <div className="mb-3 flex items-center justify-between gap-4">
-            <h2 className="flex items-center gap-2 text-lg font-bold">
-              <ListMusic className="size-5" /> Proximas musicas
-            </h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-bold">
+                <ListMusic className="size-5" /> Proximas musicas
+              </h2>
+              {canReorder ? (
+                <p className="mt-0.5 text-xs font-medium text-muted-foreground">
+                  Arraste um card ou use as setas para alterar a ordem da fila.
+                </p>
+              ) : null}
+            </div>
             <Badge variant="secondary">{queuedSongs.length} na fila</Badge>
           </div>
 
@@ -234,35 +341,114 @@ export default function MusicasPage() {
             </Card>
           ) : (
             <div className="grid gap-3">
-              {queuedSongs.map((song) => (
-                <Card key={song.id} className="rounded-[18px] shadow-none">
-                  <CardContent className="flex items-center gap-4 py-4 max-sm:flex-wrap">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-purple-100 text-sm font-black text-purple-950">
-                      {song.position}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-bold">{song.title}</p>
-                      <p className="mt-1 text-sm font-medium text-muted-foreground">
-                        {displayComandaName(song.tabName)}
+              {queuedSongs.map((song, index) => {
+                const displayPosition = song.position ?? index + 1
+                const isFirst = index === 0
+                const isLast = index === queuedSongs.length - 1
+                const isDragging = draggingId === song.id
+                const isDragOver = dragOverId === song.id && !isDragging
+
+                return (
+                  <Card
+                    key={song.id}
+                    draggable={canReorder && !isMutating}
+                    onDragStart={(event) => handleDragStart(event, song)}
+                    onDragOver={(event) => handleDragOver(event, song)}
+                    onDragLeave={(event) => handleDragLeave(event, song)}
+                    onDrop={(event) => handleDrop(event, index)}
+                    onDragEnd={handleDragEnd}
+                    className={cn(
+                      "rounded-[18px] shadow-none transition-all duration-150",
+                      canReorder && !isMutating && "cursor-grab active:cursor-grabbing",
+                      isDragging && "opacity-50 ring-2 ring-purple-300",
+                      isDragOver &&
+                        "border-purple-400 bg-purple-50/60 ring-2 ring-purple-200 dark:border-purple-500 dark:bg-purple-950/20 dark:ring-purple-900"
+                    )}
+                  >
+                    <CardContent className="flex items-center gap-3 py-4 max-sm:flex-wrap">
+                      {canManageQueue ? (
+                        <span
+                          aria-hidden="true"
+                          title={
+                            canReorder
+                              ? "Arraste para reordenar"
+                              : "Adicione mais musicas para reordenar"
+                          }
+                          className={cn(
+                            "flex shrink-0 items-center text-muted-foreground",
+                            !canReorder && "opacity-35"
+                          )}
+                        >
+                          <GripVertical className="size-4" />
+                        </span>
+                      ) : null}
+
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-purple-100 text-sm font-black text-purple-950 dark:bg-purple-950/60 dark:text-purple-200">
+                        {displayPosition}
+                      </span>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold">{song.title}</p>
+                        <p className="mt-1 text-sm font-medium text-muted-foreground">
+                          {displayComandaName(song.tabName)}
+                        </p>
+                      </div>
+
+                      <p className="flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground">
+                        <Clock3 className="size-3.5" />{" "}
+                        {formatDate(song.requestedAt)}
                       </p>
-                    </div>
-                    <p className="flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground">
-                      <Clock3 className="size-3.5" />{" "}
-                      {formatDate(song.requestedAt)}
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Cancelar ${song.title}`}
-                      title="Cancelar musica"
-                      onClick={() => setPendingAction({ type: "cancel", song })}
-                      disabled={isMutating}
-                    >
-                      <Trash2 className="size-4 text-red-700" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+
+                      {canManageQueue ? (
+                        <div className="flex shrink-0 items-center gap-1 max-sm:ml-auto">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Mover ${song.title} para o topo`}
+                            title="Mover para o topo (1º da fila)"
+                            onClick={() => void moveSong(song.id, 1)}
+                            disabled={isMutating || isFirst}
+                          >
+                            <ArrowUpToLine className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Subir ${song.title} na fila`}
+                            title="Subir uma posicao"
+                            onClick={() => void moveSong(song.id, index)}
+                            disabled={isMutating || isFirst}
+                          >
+                            <ArrowUp className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Descer ${song.title} na fila`}
+                            title="Descer uma posicao"
+                            onClick={() => void moveSong(song.id, index + 2)}
+                            disabled={isMutating || isLast}
+                          >
+                            <ArrowDown className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Cancelar ${song.title}`}
+                            title="Cancelar musica"
+                            onClick={() =>
+                              setPendingAction({ type: "cancel", song })
+                            }
+                            disabled={isMutating}
+                          >
+                            <Trash2 className="size-4 text-red-700 dark:text-red-400" />
+                          </Button>
+                        </div>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </section>

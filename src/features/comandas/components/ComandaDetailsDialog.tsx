@@ -5,16 +5,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { format as formatMoney } from "@/lib/money"
 import type { Song } from "@pi/contracts"
-import { Music2, PackageOpen } from "lucide-react"
+import { Check, Music2, PackageOpen, Plus } from "lucide-react"
 import {
+  billableOrderCount,
   calcComandaTotal,
   comandaStatusLabel,
   Comanda,
   displayComandaName,
   formatDate,
+  isTabActive,
   orderStatusLabel,
   statusClass,
 } from "../shared"
@@ -38,13 +41,22 @@ export function ComandaDetailsDialog({
   songs,
   open,
   onOpenChange,
+  onFinish,
+  onAddOrder,
+  canManageOrders,
 }: {
   comanda: Comanda | null
   songs: Song[]
   open: boolean
   onOpenChange: (open: boolean) => void
+  onFinish: () => void
+  onAddOrder: () => void
+  canManageOrders: boolean
 }) {
   if (!comanda) return null
+
+  const comandaActive = isTabActive(comanda)
+  const canFinish = comandaActive && billableOrderCount(comanda) > 0
 
   const comandaSongs = songs
     .filter((song) => song.tab === comanda.id)
@@ -107,6 +119,17 @@ export function ComandaDetailsDialog({
           </TabsList>
 
           <TabsContent value="orders" className="space-y-3">
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onAddOrder}
+                disabled={!comandaActive || !canManageOrders}
+              >
+                <Plus className="size-4" /> Adicionar pedido
+              </Button>
+            </div>
             {comanda.orders.length > 0 ? (
               comanda.orders.map((order) => (
                 <div
@@ -138,6 +161,17 @@ export function ComandaDetailsDialog({
           </TabsContent>
 
           <TabsContent value="songs" className="space-y-3">
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled
+                title="A adição de músicas será implementada em uma etapa futura."
+              >
+                <Plus className="size-4" /> Adicionar música
+              </Button>
+            </div>
             {comandaSongs.length > 0 ? (
               comandaSongs.map((song) => (
                 <div
@@ -167,6 +201,17 @@ export function ComandaDetailsDialog({
             )}
           </TabsContent>
         </Tabs>
+
+        <div className="flex justify-end border-t border-border pt-4">
+          <Button
+            type="button"
+            variant="default"
+            onClick={onFinish}
+            disabled={!canFinish || !canManageOrders}
+          >
+            <Check className="size-4" /> Finalizar comanda
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   )

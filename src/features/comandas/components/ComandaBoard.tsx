@@ -390,6 +390,21 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
         onOpenChange={(open) => {
           if (!open) setDetailsId(null)
         }}
+        onFinish={() => {
+          if (!detailsComanda) return
+          setDetailsId(null)
+          setPendingAction({
+            type: "finalizar-comanda",
+            comanda: detailsComanda,
+          })
+        }}
+        onAddOrder={() => {
+          if (!detailsComanda) return
+          selectComanda(detailsComanda.id)
+          setDetailsId(null)
+          setAddOpen(true)
+        }}
+        canManageOrders={canManageOrders}
       />
 
       <AddOrderDialog

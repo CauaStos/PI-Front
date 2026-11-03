@@ -47,7 +47,9 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     ((session?.user as { role?: string } | undefined)?.role === "admin"
       ? "admin"
       : "garcom")
-  const canManageOrders = employeeRole === "admin" || employeeRole === "garcom"
+  const canManageOrders = ["admin", "ADMIN", "garcom", "OPERADOR"].includes(
+    employeeRole
+  )
   const [board, setBoard] = useState(initialData)
   const [now, setNow] = useState(() => new Date())
   const [selectedId, setSelectedId] = useState(initialData.comandas[0]?.id)

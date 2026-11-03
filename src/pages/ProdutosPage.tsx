@@ -30,7 +30,9 @@ export default function ProdutosPage() {
   const currentUser = session?.user as
     { role?: string; employeeRole?: string } | undefined
   const isAdmin =
-    currentUser?.employeeRole === "admin" || currentUser?.role === "admin"
+    currentUser?.employeeRole === "admin" ||
+    currentUser?.employeeRole === "ADMIN" ||
+    currentUser?.role === "admin"
   const [products, setProducts] = useState<Product[]>([])
   const [selected, setSelected] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)

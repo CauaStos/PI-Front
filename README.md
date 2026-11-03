@@ -1,6 +1,15 @@
 # PI Frontend
 
 Front do OnStage (Projeto Interdisciplinar): React + Vite + shadcn/ui.
+<<<<<<< HEAD
+
+## Requisitos
+
+- Node.js 22+
+- pi-backend rodando
+
+## Para rodar
+=======
 
 O back-end fica no repositório [PI-Backend](https://github.com/CauaStos/PI-Backend).
 
@@ -14,6 +23,7 @@ React, Vite e as outras dependências vêm pelo npm.
 ## Como rodar
 
 Com o backend rodando, execute:
+>>>>>>> 7efbe0937d48ccc34374203542d802d3499b3dae
 
 ```bash
 npm ci
@@ -23,6 +33,11 @@ npm run dev
 
 Depois, é só abrir o `http://localhost:5173`.
 
+<<<<<<< HEAD
+Sem `VITE_API_URL` no `.env` ele vai usar o proxy do próprio Vite pro `http://localhost:3000`. Ou seja, se o back estiver na porta padrão, não precisa configurar nada. Só mude essa env se a API estivar rodando em outra porta.
+
+O app não tem cadastro por padrão. O primeiro login vem do bootstrap-admin do backend (leia o README do pi-backend).
+=======
 ## Variáveis de ambiente
 
 A `VITE_API_URL` é opcional. Sem ela o front usa a mesma origem (`/api/v1`):
@@ -86,6 +101,7 @@ npm run build          # usa /api/v1 por padrão; não precisa de VITE_API_URL
 Depois o backend sobe o Compose (`mongo` + `api` + `web`) e o Tailscale Serve
 aponta para `127.0.0.1:3001`. Passo a passo em
 [PI-Backend#deploy](https://github.com/CauaStos/PI-Backend#deploy-privado-na-tailnet-tailscale-serve).
+>>>>>>> 7efbe0937d48ccc34374203542d802d3499b3dae
 
 ## Scripts
 

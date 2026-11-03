@@ -4,10 +4,12 @@ import { ComandasPage } from "@/pages/ComandasPage"
 import DashboardPage from "@/pages/DashboardPage"
 import MusicasPage from "@/pages/MusicasPage"
 import ProdutosPage from "@/pages/ProdutosPage"
+import FuncionariosPage from "@/pages/FuncionariosPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage"
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
+import { EmployeeManagementGuard } from "./EmployeeManagementGuard"
 import { AuthGuard } from "./AuthGuard"
 import { PublicOnly } from "./PublicOnly"
 
@@ -30,6 +32,9 @@ export function AppRoutes() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/comandas" element={<ComandasPage />} />
         <Route path="/produtos" element={<ProdutosPage />} />
+        <Route element={<EmployeeManagementGuard />}>
+          <Route path="/funcionarios" element={<FuncionariosPage />} />
+        </Route>
         <Route path="/musicas" element={<MusicasPage />} />
         <Route path="*" element={<Navigate to="/comandas" replace />} />
       </Route>

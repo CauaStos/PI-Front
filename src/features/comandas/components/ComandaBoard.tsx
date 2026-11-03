@@ -18,6 +18,7 @@ import {
 import { AddOrderDialog } from "./AddOrderDialog"
 import { ConfirmActionDialog } from "./ConfirmActionDialog"
 import { CreateComandaDialog } from "./CreateComandaDialog"
+import { ComandaDetailsDialog } from "./ComandaDetailsDialog"
 import { EditOrderDialog } from "./EditOrderDialog"
 import {
   BoardData,
@@ -52,6 +53,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([])
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [detailsId, setDetailsId] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [editOrder, setEditOrder] = useState<ComandaOrder | null>(null)
 
@@ -83,6 +85,8 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   )
   const selected =
     todayComandas.find((c) => c.id === selectedId) ?? todayComandas[0]
+  const detailsComanda =
+    comandas.find((comanda) => comanda.id === detailsId) ?? null
   const activeComandas = comandas.filter(
     (c) => c.status !== "finished" && c.status !== "cancelled"
   )
@@ -318,6 +322,10 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                             comanda,
                           })
                         }
+                        onDetails={() => {
+                          selectComanda(comanda.id)
+                          setDetailsId(comanda.id)
+                        }}
                         songs={board.songs}
                       />
                     ))}
@@ -373,6 +381,15 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
         comandaName={nextComandaName(comandas.length + 1)}
         isMutating={isMutating}
         onConfirm={createComanda}
+      />
+
+      <ComandaDetailsDialog
+        comanda={detailsComanda}
+        songs={board.songs}
+        open={detailsId !== null && detailsComanda !== null}
+        onOpenChange={(open) => {
+          if (!open) setDetailsId(null)
+        }}
       />
 
       <AddOrderDialog

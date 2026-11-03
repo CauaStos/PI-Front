@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import {
   Check,
   Clock3,
+  Info,
   ListMusic,
   MoreHorizontal,
   QrCode,
@@ -35,6 +36,7 @@ export function ComandaCard({
   onClick,
   onFinish,
   onCancel,
+  onDetails,
   songs,
 }: {
   comanda: Comanda
@@ -42,6 +44,7 @@ export function ComandaCard({
   onClick: () => void
   onFinish: () => void
   onCancel: () => void
+  onDetails: () => void
   songs: Song[]
 }) {
   const queue = songs.filter(
@@ -57,7 +60,8 @@ export function ComandaCard({
     <Card
       className={cn(
         "min-h-[236px] animate-in rounded-[18px] bg-card p-2 text-card-foreground transition duration-200 fade-in-0 zoom-in-95 hover:ring-purple-300",
-        selected && "ring-2 ring-purple-200",
+        selected &&
+          "bg-purple-50 ring-2 ring-purple-500 shadow-md dark:bg-purple-950/30 dark:ring-purple-400",
         comanda.status === "cancelled" && "opacity-55"
       )}
     >
@@ -77,6 +81,11 @@ export function ComandaCard({
             <span className="min-w-0 truncate text-[11px] leading-none font-black uppercase">
               {comandaStatusLabel[comanda.status]}
             </span>
+            {selected ? (
+              <span className="text-[10px] leading-none font-bold uppercase text-purple-700 dark:text-purple-300">
+                Selecionada
+              </span>
+            ) : null}
           </h2>
           <p className="mt-2 text-[11px] font-bold text-muted-foreground">
             Aberta em
@@ -117,7 +126,14 @@ export function ComandaCard({
           </div>
         </button>
 
-        <div className="mt-3 flex justify-end">
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={onDetails}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold text-purple-700 hover:bg-purple-100 dark:text-purple-300 dark:hover:bg-purple-950/40"
+          >
+            <Info className="size-3.5" /> Exibir detalhes
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label={`Acoes de ${displayComandaName(comanda.tableName)}`}

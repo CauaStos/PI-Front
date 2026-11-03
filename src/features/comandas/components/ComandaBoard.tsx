@@ -37,6 +37,7 @@ import {
   isClosedOnDay,
   isVisibleInToday,
   nextComandaName,
+  sortComandasForBoard,
 } from "../shared"
 
 export function ComandaBoard({ initialData }: { initialData: BoardData }) {
@@ -80,8 +81,8 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
 
   const comandas = board.comandas
   const todayKey = getDayKey(now)
-  const todayComandas = comandas.filter((comanda) =>
-    isVisibleInToday(comanda, todayKey)
+  const todayComandas = sortComandasForBoard(
+    comandas.filter((comanda) => isVisibleInToday(comanda, todayKey))
   )
   const selected =
     todayComandas.find((c) => c.id === selectedId) ?? todayComandas[0]
@@ -326,6 +327,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                           selectComanda(comanda.id)
                           setDetailsId(comanda.id)
                         }}
+                        canManageOrders={canManageOrders}
                         songs={board.songs}
                       />
                     ))}

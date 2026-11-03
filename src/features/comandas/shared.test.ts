@@ -13,6 +13,7 @@ import {
   isTabActive,
   isVisibleInToday,
   nextComandaName,
+  sortComandasForBoard,
 } from "./shared"
 
 type ComandaOverride = Partial<Comanda> & { tableName?: string; status?: Comanda["status"] }
@@ -132,6 +133,50 @@ describe("dia de caixa (America/Sao_Paulo)", () => {
     expect(isVisibleInToday(finishedYesterday, "2026-09-23")).toBe(false)
     expect(isVisibleInToday(mkComanda(), "2026-09-23")).toBe(true)
   })
+})
+
+describe("ordenação da lista de comandas", () => {
+ it("mantem ativas primeiro, finalizadas depois e canceladas por ultimo", () => {
+   const comandas = [
+     mkComanda({
+       id: "cancelled",
+       status: "cancelled",
+       openedAt: "2026-09-23T10:00:00Z",
+       closedAt: "2026-09-23T12:00:00Z",
+     }),
+     mkComanda({
+       id: "finished",
+       status: "finished",
+       openedAt: "2026-09-23T09:00:00Z",
+       closedAt: "2026-09-23T11:00:00Z",
+     }),
+     mkComanda({
+       id: "open",
+       status: "open",
+       openedAt: "2026-09-23T08:00:00Z",
+     }),
+   ]
+
+   expect(sortComandasForBoard(comandas).map((comanda) => comanda.id)).toEqual([
+     "open",
+     "finished",
+     "cancelled",
+   ])
+ })
+
+ it("usa a data e depois o id como desempate", () => {
+   const comandas = [
+     mkComanda({ id: "b", status: "open", openedAt: "2026-09-23T10:00:00Z" }),
+     mkComanda({ id: "a", status: "open", openedAt: "2026-09-23T10:00:00Z" }),
+     mkComanda({ id: "c", status: "open", openedAt: "2026-09-23T09:00:00Z" }),
+   ]
+
+   expect(sortComandasForBoard(comandas).map((comanda) => comanda.id)).toEqual([
+     "c",
+     "a",
+     "b",
+   ])
+ })
 })
 
 describe("buildHistoryRows", () => {

@@ -1,21 +1,14 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Check,
   Clock3,
   Info,
   ListMusic,
-  MoreHorizontal,
   QrCode,
   X,
 } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import type { Song } from "@pi/contracts"
 import { cn } from "@/lib/utils"
 import {
@@ -37,6 +30,7 @@ export function ComandaCard({
   onFinish,
   onCancel,
   onDetails,
+  canManageOrders,
   songs,
 }: {
   comanda: Comanda
@@ -45,6 +39,7 @@ export function ComandaCard({
   onFinish: () => void
   onCancel: () => void
   onDetails: () => void
+  canManageOrders: boolean
   songs: Song[]
 }) {
   const queue = songs.filter(
@@ -134,37 +129,29 @@ export function ComandaCard({
           >
             <Info className="size-3.5" /> Exibir detalhes
           </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              aria-label={`Acoes de ${displayComandaName(comanda.tableName)}`}
-              className={cn(
-                "rounded-md px-2 py-1 text-muted-foreground hover:text-foreground",
-                "hover:bg-muted"
-              )}
-            >
-              <MoreHorizontal className="size-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              {terminal ? (
-                <DropdownMenuItem disabled>
-                  Sem ações disponíveis
-                </DropdownMenuItem>
-              ) : (
-                <>
-                  <DropdownMenuItem
-                    onClick={onFinish}
-                    disabled={!hasBillableOrders}
-                  >
-                    <Check className="size-4" /> Finalizar Comanda
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem variant="destructive" onClick={onCancel}>
-                    <X className="size-4" /> Cancelar Comanda
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        </div>
+
+        <div className="mt-2 grid grid-cols-1 gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onFinish}
+            disabled={terminal || !hasBillableOrders || !canManageOrders}
+            className="w-full text-xs"
+          >
+            <Check className="size-3.5" /> Finalizar comanda
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            onClick={onCancel}
+            disabled={terminal || !canManageOrders}
+            className="w-full text-xs"
+          >
+            <X className="size-3.5" /> Cancelar comanda
+          </Button>
         </div>
       </CardContent>
     </Card>

@@ -78,15 +78,16 @@ export function OrdersTable({
   return (
     <div className="mt-4 overflow-hidden">
       <div className="mb-3 flex justify-end lg:hidden">
-        <button
+        <Button
           type="button"
-          title={comandaActive ? "Adicionar pedido" : "Comanda encerrada"}
+          size="sm"
+          variant="outline"
           onClick={onAdd}
           disabled={!comandaActive || !canManageOrders}
-          className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
         >
           <Plus className="size-4" />
-        </button>
+          Adicionar pedido
+        </Button>
       </div>
       {selectedCount > 0 ? (
         <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2">
@@ -131,16 +132,17 @@ export function OrdersTable({
             <TableHead className="px-4 text-right text-xs font-bold text-muted-foreground">
               Qtd
             </TableHead>
-            <TableHead className="w-20 px-2 text-right">
-              <button
+            <TableHead className="w-40 px-2 text-right">
+              <Button
                 type="button"
-                title={comandaActive ? "Adicionar pedido" : "Comanda encerrada"}
+                size="sm"
+                variant="outline"
                 onClick={onAdd}
                 disabled={!comandaActive || !canManageOrders}
-                className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
               >
                 <Plus className="size-4" />
-              </button>
+                Adicionar pedido
+              </Button>
             </TableHead>
           </TableRow>
         </TableHeader>

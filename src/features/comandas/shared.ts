@@ -124,6 +124,27 @@ export function isVisibleInToday(comanda: Comanda, todayKey: string) {
   return isTabActive(comanda) || isClosedOnDay(comanda, todayKey)
 }
 
+const comandaListStatusRank: Record<Comanda["status"], number> = {
+  open: 0,
+  in_progress: 0,
+  finished: 1,
+  cancelled: 2,
+}
+
+export function sortComandasForBoard(comandas: Comanda[]) {
+  return [...comandas].sort((a, b) => {
+    const statusOrder =
+      comandaListStatusRank[a.status] - comandaListStatusRank[b.status]
+    if (statusOrder !== 0) return statusOrder
+
+    const aDate = new Date(a.closedAt ?? a.openedAt).getTime()
+    const bDate = new Date(b.closedAt ?? b.openedAt).getTime()
+    if (aDate !== bDate) return aDate - bDate
+
+    return a.id.localeCompare(b.id)
+  })
+}
+
 export function buildHistoryRows(comandas: Comanda[]) {
   const rows = new Map<string, HistoryRow>()
 

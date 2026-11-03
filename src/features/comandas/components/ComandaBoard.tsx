@@ -17,6 +17,7 @@ import {
 } from "."
 import { AddOrderDialog } from "./AddOrderDialog"
 import { ConfirmActionDialog } from "./ConfirmActionDialog"
+import { CreateComandaDialog } from "./CreateComandaDialog"
 import { EditOrderDialog } from "./EditOrderDialog"
 import {
   BoardData,
@@ -50,6 +51,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   const [selectedId, setSelectedId] = useState(initialData.comandas[0]?.id)
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([])
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [editOrder, setEditOrder] = useState<ComandaOrder | null>(null)
 
@@ -113,12 +115,13 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   })
 
   async function createComanda() {
-    await mutate(async () => {
+    const ok = await mutate(async () => {
       await api.post("/tabs", {
         tableName: nextComandaName(comandas.length + 1),
       })
       return "Comanda criada."
     })
+    if (ok) setCreateOpen(false)
   }
 
   async function addOrder(payload: {
@@ -294,7 +297,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                 <div className="h-[520px] overflow-y-auto px-2 pt-2 shadow-[inset_0_-18px_18px_-22px_rgba(0,0,0,0.35)] max-sm:h-[440px]">
                   <div className="grid grid-cols-3 gap-3 max-md:grid-cols-2 max-sm:grid-cols-1">
                     <CreateComandaCard
-                      onClick={createComanda}
+                      onClick={() => setCreateOpen(true)}
                       disabled={isMutating || !canManageOrders}
                     />
                     {todayComandas.map((comanda) => (
@@ -363,6 +366,14 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
           </Tabs>
         </section>
       </div>
+
+      <CreateComandaDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        comandaName={nextComandaName(comandas.length + 1)}
+        isMutating={isMutating}
+        onConfirm={createComanda}
+      />
 
       <AddOrderDialog
         open={addOpen}

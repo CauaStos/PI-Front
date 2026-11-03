@@ -52,6 +52,7 @@ export default function ProdutosPage() {
   const [editPrice, setEditPrice] = useState("")
   const [editStock, setEditStock] = useState("0")
   const [editDesc, setEditDesc] = useState("")
+  const [editImage, setEditImage] = useState("")
 
   async function reload() {
     const data = await api.get<Product[]>("/products")
@@ -129,6 +130,7 @@ export default function ProdutosPage() {
     setEditPrice(String(product.price / 10_000))
     setEditStock(String(product.stock))
     setEditDesc(product.description ?? "")
+    setEditImage(product.image ?? "")
     setEditOpen(true)
   }
 
@@ -145,6 +147,7 @@ export default function ProdutosPage() {
         price,
         stock: Number(editStock),
         description: editDesc.trim(),
+        image: editImage || undefined,
       })
       return "Produto atualizado."
     })
@@ -391,7 +394,7 @@ export default function ProdutosPage() {
           setEditOpen(open)
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[85svh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar produto</DialogTitle>
             <DialogDescription>Altere os dados do produto.</DialogDescription>
@@ -431,6 +434,37 @@ export default function ProdutosPage() {
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
               />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold">
+              Foto do produto
+              <input
+                className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (!file) return
+                  if (file.size > 5 * 1024 * 1024) {
+                    toast.error("A foto deve ter no maximo 5 MB.")
+                    event.target.value = ""
+                    return
+                  }
+                  const reader = new FileReader()
+                  reader.onload = () => setEditImage(String(reader.result))
+                  reader.readAsDataURL(file)
+                }}
+              />
+              {editImage ? (
+                <img
+                  src={editImage}
+                  alt={`Prévia da foto de ${editName}`}
+                  className="h-32 rounded-lg object-cover"
+                />
+              ) : (
+                <span className="rounded-lg border border-dashed border-border px-3 py-5 text-center text-xs text-muted-foreground">
+                  Nenhuma foto cadastrada.
+                </span>
+              )}
             </label>
           </div>
           <DialogFooter>

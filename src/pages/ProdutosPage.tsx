@@ -159,11 +159,52 @@ export default function ProdutosPage() {
 
   async function handleDelete(product: Product) {
     if (!confirm(`Remover o produto "${product.name}"?`)) return
-    const data = await mutate(async () => {
+
+    setIsMutating(true)
+    try {
       await api.delete(`/products/${product.id}`)
-      return "Produto removido."
-    })
-    if (data) setSelected(data[0] ?? null)
+      const data = await reload()
+      setSelected(data[0] ?? null)
+
+      toast.success("Produto removido.", {
+        duration: 5000,
+        action: {
+          label: "Desfazer",
+          onClick: async () => {
+            setIsMutating(true)
+            try {
+              const restored = await api.post<Product>("/products", {
+                name: product.name,
+                price: product.price,
+                stock: product.stock,
+                description: product.description,
+                image: product.image,
+              })
+              const updatedProducts = await reload()
+              setSelected(
+                updatedProducts.find((item) => item.id === restored.id) ??
+                  updatedProducts.find((item) => item.name === product.name) ??
+                  updatedProducts[0] ??
+                  null
+              )
+              toast.success("Produto restaurado.")
+            } catch (err) {
+              toast.error(
+                err instanceof Error
+                  ? err.message
+                  : "Não foi possível desfazer a remoção."
+              )
+            } finally {
+              setIsMutating(false)
+            }
+          },
+        },
+      })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Operacao falhou.")
+    } finally {
+      setIsMutating(false)
+    }
   }
 
   function formatDate(date: string) {

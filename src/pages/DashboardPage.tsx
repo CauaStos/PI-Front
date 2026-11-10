@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { Card, CardContent } from "@/components/ui/card"
+import { RetryState } from "@/components/retry-state"
 import { fetchBoard } from "@/features/comandas/api/board"
 import { useBoardChanged } from "@/features/comandas/hooks/useBoardChanged"
 import { CashPanel } from "@/features/comandas/components/CashPanel"
@@ -18,12 +19,17 @@ import type { BoardData } from "@pi/contracts"
 export default function DashboardPage() {
   const [board, setBoard] = useState<BoardData | null>(null)
   const [error, setError] = useState(false)
+  const [retrying, setRetrying] = useState(false)
 
   async function reload() {
+    setRetrying(true)
     try {
       setBoard(await fetchBoard())
+      setError(false)
     } catch {
       setError(true)
+    } finally {
+      setRetrying(false)
     }
   }
 
@@ -38,8 +44,12 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <main className="flex min-h-svh items-center justify-center">
-        <p className="text-sm text-muted-foreground">Erro ao carregar dados.</p>
+      <main className="flex min-h-svh items-center justify-center px-5">
+        <RetryState
+          message="Não foi possível carregar o dashboard."
+          onRetry={() => void reload()}
+          loading={retrying}
+        />
       </main>
     )
   }

@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState, type DragEvent } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { RetryState } from "@/components/retry-state"
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,8 @@ export default function MusicasPage() {
   const [songs, setSongs] = useState<Song[]>([])
   const [tabs, setTabs] = useState<Comanda[]>([])
   const [loading, setLoading] = useState(true)
+  const [retrying, setRetrying] = useState(false)
+  const [loadError, setLoadError] = useState("")
   const [isMutating, setIsMutating] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
@@ -77,37 +80,33 @@ export default function MusicasPage() {
     return nextSongs
   }, [])
 
+  async function loadInitialData() {
+    setRetrying(true)
+    try {
+      const [nextSongs, nextTabs, profile] = await Promise.all([
+        api.get<Song[]>("/songs"),
+        api.get<Comanda[]>("/tabs"),
+        api.get<Employee>("/employees/me").catch(() => null),
+      ])
+      setSongs(nextSongs)
+      setTabs(nextTabs)
+      if (profile) setCurrentEmployee(profile)
+      setLoadError("")
+    } catch (err) {
+      setLoadError(
+        err instanceof Error
+          ? err.message
+          : "Erro ao carregar a fila de musicas."
+      )
+    } finally {
+      setLoading(false)
+      setRetrying(false)
+    }
+  }
+
   useEffect(() => {
-    let cancelled = false
-
-    async function load() {
-      try {
-        const [nextSongs, nextTabs, profile] = await Promise.all([
-          api.get<Song[]>("/songs"),
-          api.get<Comanda[]>("/tabs"),
-          api.get<Employee>("/employees/me").catch(() => null),
-        ])
-        if (cancelled) return
-        setSongs(nextSongs)
-        setTabs(nextTabs)
-        if (profile) setCurrentEmployee(profile)
-      } catch (err) {
-        if (!cancelled) {
-          toast.error(
-            err instanceof Error
-              ? err.message
-              : "Erro ao carregar a fila de musicas."
-          )
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadInitialData()
   }, [])
 
   useBoardChanged(() => {
@@ -266,6 +265,18 @@ export default function MusicasPage() {
     return (
       <main className="flex min-h-svh items-center justify-center">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </main>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <main className="flex min-h-svh items-center justify-center px-5">
+        <RetryState
+          message={loadError}
+          onRetry={() => void loadInitialData()}
+          loading={retrying}
+        />
       </main>
     )
   }

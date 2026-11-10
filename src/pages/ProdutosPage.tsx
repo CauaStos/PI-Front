@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import { RetryState } from "@/components/retry-state"
 import { api } from "@/lib/api"
 import { authClient } from "@/lib/auth-client"
 import { format as formatMoney, parseInput } from "@/lib/money"
@@ -36,6 +37,8 @@ export default function ProdutosPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [selected, setSelected] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
+  const [retrying, setRetrying] = useState(false)
+  const [error, setError] = useState("")
   const [isMutating, setIsMutating] = useState(false)
 
   // Create dialog
@@ -59,27 +62,28 @@ export default function ProdutosPage() {
     return data
   }
 
-  useEffect(() => {
-    let cancelled = false
-
-    api
-      .get<Product[]>("/products")
-      .then((data) => {
-        if (cancelled) return
-
-        setProducts(data)
-        if (data.length > 0) setSelected(data[0]!)
-      })
-      .catch(() => {
-        if (!cancelled) toast.error("Erro ao carregar produtos.")
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-
-    return () => {
-      cancelled = true
+  async function loadProducts() {
+    setRetrying(true)
+    try {
+      const data = await reload()
+      if (data.length > 0) setSelected(data[0]!)
+      setError("")
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Não foi possível carregar os produtos."
+      )
+    } finally {
+      setLoading(false)
+      setRetrying(false)
     }
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadProducts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function mutate(action: () => Promise<string>) {
@@ -177,6 +181,18 @@ export default function ProdutosPage() {
     return (
       <main className="flex min-h-svh items-center justify-center">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </main>
+    )
+  }
+
+  if (error) {
+    return (
+      <main className="flex min-h-svh items-center justify-center px-5">
+        <RetryState
+          message={error}
+          onRetry={() => void loadProducts()}
+          loading={retrying}
+        />
       </main>
     )
   }

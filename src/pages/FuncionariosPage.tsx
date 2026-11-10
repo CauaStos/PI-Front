@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { RetryState } from "@/components/retry-state"
 import {
   Dialog,
   DialogContent,
@@ -67,6 +68,7 @@ export default function FuncionariosPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null)
   const [loading, setLoading] = useState(true)
+  const [retrying, setRetrying] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [search, setSearch] = useState("")
@@ -92,42 +94,30 @@ export default function FuncionariosPage() {
   }, [employees, search])
 
   async function loadEmployees() {
-    const [me, list] = await Promise.all([
-      api.get<Employee>("/employees/me"),
-      api.get<Employee[]>("/employees"),
-    ])
-    setCurrentEmployee(me)
-    setEmployees(list)
-    setError("")
+    setRetrying(true)
+    try {
+      const [me, list] = await Promise.all([
+        api.get<Employee>("/employees/me"),
+        api.get<Employee[]>("/employees"),
+      ])
+      setCurrentEmployee(me)
+      setEmployees(list)
+      setError("")
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Não foi possível carregar os funcionários."
+      )
+    } finally {
+      setLoading(false)
+      setRetrying(false)
+    }
   }
 
   useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const [me, list] = await Promise.all([
-          api.get<Employee>("/employees/me"),
-          api.get<Employee[]>("/employees"),
-        ])
-        if (cancelled) return
-        setCurrentEmployee(me)
-        setEmployees(list)
-      } catch (cause) {
-        if (!cancelled) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "Não foi possível carregar os funcionários."
-          )
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    void load()
-    return () => {
-      cancelled = true
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadEmployees()
   }, [])
 
   function openCreate() {
@@ -229,14 +219,25 @@ export default function FuncionariosPage() {
     )
   }
 
-  if (error || !canManage) {
+  if (error) {
+    return (
+      <main className="grid min-h-svh place-items-center px-5">
+        <RetryState
+          message={error}
+          onRetry={() => void loadEmployees()}
+          loading={retrying}
+        />
+      </main>
+    )
+  }
+
+  if (!canManage) {
     return (
       <main className="min-h-svh px-5 py-8 text-zinc-950 sm:px-10 dark:text-zinc-50">
         <div className="mx-auto max-w-3xl">
           <h1 className="text-2xl font-bold">Funcionários</h1>
           <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
-            {error ||
-              "Seu perfil não tem permissão para administrar funcionários."}
+            Seu perfil não tem permissão para administrar funcionários.
           </p>
         </div>
       </main>

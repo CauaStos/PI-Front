@@ -1,7 +1,9 @@
 import { format as formatMoney } from "@/lib/money"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, FileSpreadsheet, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import { exportHistoryToExcel } from "../export-history"
 import {
   HistoryComanda,
   HistoryRow,
@@ -36,6 +39,9 @@ export function HistoryTable({ rows }: { rows: HistoryRow[] }) {
   const [selectedComanda, setSelectedComanda] = useState<HistoryComanda | null>(
     null
   )
+  const [isExporting, setIsExporting] = useState(false)
+
+  const totalClosed = rows.reduce((acc, row) => acc + row.closed, 0)
 
   function toggleDay(dayKey: string) {
     setExpandedDays((current) =>
@@ -45,9 +51,46 @@ export function HistoryTable({ rows }: { rows: HistoryRow[] }) {
     )
   }
 
+  async function handleExport() {
+    if (rows.length === 0 || isExporting) return
+    setIsExporting(true)
+    try {
+      await exportHistoryToExcel(rows)
+      toast.success("Planilha exportada com sucesso.")
+    } catch {
+      toast.error("Não foi possível exportar a planilha.")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <>
-      <Card className="rounded-xl py-0 shadow-none">
+      <Card className="gap-0 rounded-xl py-0 shadow-none">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold">Histórico de comandas</p>
+            <p className="text-xs text-muted-foreground">
+              {totalClosed}{" "}
+              {totalClosed === 1 ? "comanda encerrada" : "comandas encerradas"}{" "}
+              em {rows.length} {rows.length === 1 ? "dia" : "dias"}
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void handleExport()}
+            disabled={rows.length === 0 || isExporting}
+          >
+            {isExporting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="size-4" />
+            )}
+            {isExporting ? "Exportando..." : "Exportar Excel"}
+          </Button>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>

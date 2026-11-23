@@ -3,11 +3,13 @@ import { Calendar, CircleDollarSign, Clock3, ReceiptText } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export function CashPanel({
+  title = "Caixa",
   cashDate,
   totalRevenue,
   totalOrders,
   activeComandas,
 }: {
+  title?: string
   cashDate: string
   totalRevenue: number
   totalOrders: number
@@ -17,7 +19,7 @@ export function CashPanel({
     <Card className="h-fit self-start border-0 bg-transparent py-0 shadow-none ring-0">
       <CardHeader className="px-0">
         <CardTitle className="text-[22px] font-bold tracking-normal">
-          Caixa
+          {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 px-0 text-sm">

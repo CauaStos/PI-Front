@@ -9,19 +9,8 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { RetryState } from "@/components/retry-state"
-import { fetchBoard } from "@/features/comandas/api/board"
 import { useBoardChanged } from "@/features/comandas/hooks/useBoardChanged"
-import { CashPanel } from "@/features/comandas/components/CashPanel"
-import { HistoryTable } from "@/features/comandas/components/HistoryTable"
-import {
-  buildHistoryRows,
-  calcComandaTotal,
-  formatCashDate,
-  getDayKey,
-  isClosedOnDay,
-} from "@/features/comandas/shared"
 import { fetchDashboard, type DashboardData } from "@/features/dashboard/api"
 import { BarList } from "@/features/dashboard/components/BarList"
 import { ChartCard } from "@/features/dashboard/components/ChartCard"
@@ -32,7 +21,6 @@ import {
 import { StatTile } from "@/features/dashboard/components/StatTile"
 import { ApiError } from "@/lib/api"
 import { CATEGORY_LABELS } from "@/lib/product-categories"
-import type { BoardData } from "@pi/contracts"
 
 const MONTHS = [
   "jan", "fev", "mar", "abr", "mai", "jun",
@@ -78,7 +66,6 @@ function weekColumns(days: DashboardData["ordersLast7Days"]): Column[] {
 }
 
 export default function DashboardPage() {
-  const [board, setBoard] = useState<BoardData | null>(null)
   const [stats, setStats] = useState<DashboardData | null>(null)
   const [error, setError] = useState(false)
   const [forbidden, setForbidden] = useState(false)
@@ -87,12 +74,7 @@ export default function DashboardPage() {
   async function reload() {
     setRetrying(true)
     try {
-      const [nextBoard, nextStats] = await Promise.all([
-        fetchBoard(),
-        fetchDashboard(),
-      ])
-      setBoard(nextBoard)
-      setStats(nextStats)
+      setStats(await fetchDashboard())
       setError(false)
     } catch (cause) {
       setForbidden(cause instanceof ApiError && cause.status === 403)
@@ -137,25 +119,13 @@ export default function DashboardPage() {
     )
   }
 
-  if (!board || !stats) {
+  if (!stats) {
     return (
       <main className="flex min-h-svh items-center justify-center">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </main>
     )
   }
-
-  const now = new Date()
-  const todayKey = getDayKey(now)
-  const finishedToday = board.comandas.filter(
-    (c) => c.status === "finished" && isClosedOnDay(c, todayKey)
-  )
-  const cashRevenue = finishedToday.reduce((s, c) => s + calcComandaTotal(c), 0)
-  const cashOrders = finishedToday.reduce((s, c) => s + c.orders.length, 0)
-  const activeComandas = board.comandas.filter(
-    (c) => c.status !== "finished" && c.status !== "cancelled"
-  ).length
-  const historyRows = buildHistoryRows(board.comandas)
 
   const { activeUsers, monthlySignups, pendingRecords, byCategory } = stats
   const totalProducts = byCategory.reduce((s, c) => s + c.products, 0)
@@ -272,20 +242,6 @@ export default function DashboardPage() {
             />
           </ChartCard>
         </section>
-
-        <div className="mt-8 grid grid-cols-[320px_minmax(0,1fr)] gap-4 max-xl:grid-cols-1">
-          <CashPanel
-            cashDate={formatCashDate(now)}
-            totalRevenue={cashRevenue}
-            totalOrders={cashOrders}
-            activeComandas={activeComandas}
-          />
-          <Card className="border-0 py-0 shadow-none ring-0">
-            <CardContent className="p-0">
-              <HistoryTable rows={historyRows} />
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </main>
   )

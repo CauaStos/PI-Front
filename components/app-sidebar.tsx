@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import {
+  Banknote,
   LayoutDashboard,
   Mic2,
   Music,
@@ -32,6 +33,7 @@ import {
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Comandas", href: "/comandas", icon: ReceiptText },
+  { label: "Caixa", href: "/caixa", icon: Banknote },
   { label: "Produtos", href: "/produtos", icon: PackageSearch },
   { label: "Musicas", href: "/musicas", icon: Music },
 ]

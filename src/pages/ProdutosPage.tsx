@@ -55,6 +55,7 @@ export default function ProdutosPage() {
   const [editPrice, setEditPrice] = useState("")
   const [editStock, setEditStock] = useState("0")
   const [editDesc, setEditDesc] = useState("")
+  const [editImage, setEditImage] = useState("")
 
   async function reload() {
     const data = await api.get<Product[]>("/products")
@@ -133,6 +134,7 @@ export default function ProdutosPage() {
     setEditPrice(String(product.price / 10_000))
     setEditStock(String(product.stock))
     setEditDesc(product.description ?? "")
+    setEditImage(product.image ?? "")
     setEditOpen(true)
   }
 
@@ -149,6 +151,7 @@ export default function ProdutosPage() {
         price,
         stock: Number(editStock),
         description: editDesc.trim(),
+        image: editImage || undefined,
       })
       return "Produto atualizado."
     })
@@ -160,11 +163,52 @@ export default function ProdutosPage() {
 
   async function handleDelete(product: Product) {
     if (!confirm(`Remover o produto "${product.name}"?`)) return
-    const data = await mutate(async () => {
+
+    setIsMutating(true)
+    try {
       await api.delete(`/products/${product.id}`)
-      return "Produto removido."
-    })
-    if (data) setSelected(data[0] ?? null)
+      const data = await reload()
+      setSelected(data[0] ?? null)
+
+      toast.success("Produto removido.", {
+        duration: 5000,
+        action: {
+          label: "Desfazer",
+          onClick: async () => {
+            setIsMutating(true)
+            try {
+              const restored = await api.post<Product>("/products", {
+                name: product.name,
+                price: product.price,
+                stock: product.stock,
+                description: product.description,
+                image: product.image,
+              })
+              const updatedProducts = await reload()
+              setSelected(
+                updatedProducts.find((item) => item.id === restored.id) ??
+                  updatedProducts.find((item) => item.name === product.name) ??
+                  updatedProducts[0] ??
+                  null
+              )
+              toast.success("Produto restaurado.")
+            } catch (err) {
+              toast.error(
+                err instanceof Error
+                  ? err.message
+                  : "Não foi possível desfazer a remoção."
+              )
+            } finally {
+              setIsMutating(false)
+            }
+          },
+        },
+      })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Operacao falhou.")
+    } finally {
+      setIsMutating(false)
+    }
   }
 
   function formatDate(date: string) {
@@ -407,7 +451,7 @@ export default function ProdutosPage() {
           setEditOpen(open)
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[85svh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar produto</DialogTitle>
             <DialogDescription>Altere os dados do produto.</DialogDescription>
@@ -447,6 +491,37 @@ export default function ProdutosPage() {
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
               />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold">
+              Foto do produto
+              <input
+                className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (!file) return
+                  if (file.size > 5 * 1024 * 1024) {
+                    toast.error("A foto deve ter no maximo 5 MB.")
+                    event.target.value = ""
+                    return
+                  }
+                  const reader = new FileReader()
+                  reader.onload = () => setEditImage(String(reader.result))
+                  reader.readAsDataURL(file)
+                }}
+              />
+              {editImage ? (
+                <img
+                  src={editImage}
+                  alt={`Prévia da foto de ${editName}`}
+                  className="h-32 rounded-lg object-cover"
+                />
+              ) : (
+                <span className="rounded-lg border border-dashed border-border px-3 py-5 text-center text-xs text-muted-foreground">
+                  Nenhuma foto cadastrada.
+                </span>
+              )}
             </label>
           </div>
           <DialogFooter>

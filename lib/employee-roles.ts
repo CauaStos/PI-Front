@@ -24,6 +24,11 @@ export function canAccessEmployeeManagement(role: string) {
   return isAdminEmployeeRole(role) || role === "GERENTE"
 }
 
+/** Espelha a permissao `dashboard.read` do backend (ADMIN e GERENTE). */
+export function canViewDashboard(role: string) {
+  return isAdminEmployeeRole(role) || role === "GERENTE"
+}
+
 export function canManageSongQueue(role: string) {
   return (
     isAdminEmployeeRole(role) ||

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom"
 
 import { ComandasPage } from "@/pages/ComandasPage"
+import CaixaPage from "@/pages/CaixaPage"
 import DashboardPage from "@/pages/DashboardPage"
 import MusicasPage from "@/pages/MusicasPage"
 import ProdutosPage from "@/pages/ProdutosPage"
@@ -30,6 +31,7 @@ export function AppRoutes() {
       <Route element={<AuthGuard />}>
         <Route path="/" element={<Navigate to="/comandas" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/caixa" element={<CaixaPage />} />
         <Route path="/comandas" element={<ComandasPage />} />
         <Route path="/produtos" element={<ProdutosPage />} />
         <Route element={<EmployeeManagementGuard />}>

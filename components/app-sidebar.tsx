@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import {
+  Banknote,
+  LayoutDashboard,
   Mic2,
   Music,
   PackageSearch,
@@ -10,7 +12,10 @@ import {
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/lib/auth"
-import { canAccessEmployeeManagement } from "@/lib/employee-roles"
+import {
+  canAccessEmployeeManagement,
+  canViewDashboard,
+} from "@/lib/employee-roles"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Sidebar,
@@ -26,7 +31,9 @@ import {
 } from "@/components/ui/sidebar"
 
 const navItems = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Comandas", href: "/comandas", icon: ReceiptText },
+  { label: "Caixa", href: "/caixa", icon: Banknote },
   { label: "Produtos", href: "/produtos", icon: PackageSearch },
   { label: "Musicas", href: "/musicas", icon: Music },
 ]
@@ -45,12 +52,14 @@ export function AppSidebar() {
   const canManageEmployees =
     employeeRole !== undefined &&
     canAccessEmployeeManagement(employeeRole)
-  const visibleNavItems = canManageEmployees
-    ? [
-        ...navItems,
-        { label: "Funcionários", href: "/funcionarios", icon: UserRound },
-      ]
-    : navItems
+  const showDashboard =
+    employeeRole !== undefined && canViewDashboard(employeeRole)
+  const visibleNavItems = [
+    ...navItems.filter((item) => item.href !== "/dashboard" || showDashboard),
+    ...(canManageEmployees
+      ? [{ label: "Funcionários", href: "/funcionarios", icon: UserRound }]
+      : []),
+  ]
   const [leaving, setLeaving] = useState(false)
   const initials = user?.name?.trim().charAt(0).toUpperCase() || "U"
 

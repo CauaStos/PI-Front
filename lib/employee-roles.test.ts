@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   canAccessEmployeeManagement,
   canManageSongQueue,
+  canViewDashboard,
   isAdminEmployeeRole,
 } from "./employee-roles"
 
@@ -39,5 +40,20 @@ describe("gerenciamento da fila de musicas", () => {
   it("restringe GERENTE e CLIENTE apenas a visualizacao", () => {
     expect(canManageSongQueue("GERENTE")).toBe(false)
     expect(canManageSongQueue("CLIENTE")).toBe(false)
+  })
+})
+
+describe("dashboard", () => {
+  it("libera ADMIN e GERENTE, como dashboard.read no backend", () => {
+    expect(canViewDashboard("ADMIN")).toBe(true)
+    expect(canViewDashboard("admin")).toBe(true)
+    expect(canViewDashboard("GERENTE")).toBe(true)
+  })
+
+  it("esconde de OPERADOR, CLIENTE e papeis legados operacionais", () => {
+    expect(canViewDashboard("OPERADOR")).toBe(false)
+    expect(canViewDashboard("CLIENTE")).toBe(false)
+    expect(canViewDashboard("garcom")).toBe(false)
+    expect(canViewDashboard("cozinha")).toBe(false)
   })
 })

@@ -24,7 +24,38 @@ import { RetryState } from "@/components/retry-state"
 import { api } from "@/lib/api"
 import { authClient } from "@/lib/auth-client"
 import { format as formatMoney, parseInput } from "@/lib/money"
-import type { Product } from "@pi/contracts"
+import {
+  CATEGORY_LABELS,
+  PRODUCT_CATEGORIES,
+  categoryOf,
+  type ProductCategory,
+  type ProductWithCategory as Product,
+} from "@/lib/product-categories"
+
+function CategorySelect({
+  value,
+  onChange,
+}: {
+  value: ProductCategory
+  onChange: (value: ProductCategory) => void
+}) {
+  return (
+    <label className="grid gap-1 text-sm font-semibold">
+      Categoria
+      <select
+        className="h-9 rounded-lg border border-input bg-background px-3"
+        value={value}
+        onChange={(e) => onChange(e.target.value as ProductCategory)}
+      >
+        {PRODUCT_CATEGORIES.map((category) => (
+          <option key={category} value={category}>
+            {CATEGORY_LABELS[category]}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
 
 export default function ProdutosPage() {
   const { data: session } = authClient.useSession()
@@ -48,6 +79,7 @@ export default function ProdutosPage() {
   const [newStock, setNewStock] = useState("0")
   const [newDesc, setNewDesc] = useState("")
   const [newImage, setNewImage] = useState("")
+  const [newCategory, setNewCategory] = useState<ProductCategory>("comida")
 
   // Edit dialog
   const [editOpen, setEditOpen] = useState(false)
@@ -56,6 +88,7 @@ export default function ProdutosPage() {
   const [editStock, setEditStock] = useState("0")
   const [editDesc, setEditDesc] = useState("")
   const [editImage, setEditImage] = useState("")
+  const [editCategory, setEditCategory] = useState<ProductCategory>("outros")
 
   async function reload() {
     const data = await api.get<Product[]>("/products")
@@ -115,6 +148,7 @@ export default function ProdutosPage() {
         stock: Number(newStock),
         description: newDesc.trim(),
         image: newImage || undefined,
+        category: newCategory,
       })
       return "Produto cadastrado."
     })
@@ -125,6 +159,7 @@ export default function ProdutosPage() {
       setNewStock("0")
       setNewDesc("")
       setNewImage("")
+      setNewCategory("comida")
       setSelected(data.find((p) => p.name === newName.trim()) ?? data[0]!)
     }
   }
@@ -135,6 +170,7 @@ export default function ProdutosPage() {
     setEditStock(String(product.stock))
     setEditDesc(product.description ?? "")
     setEditImage(product.image ?? "")
+    setEditCategory(categoryOf(product))
     setEditOpen(true)
   }
 
@@ -152,6 +188,7 @@ export default function ProdutosPage() {
         stock: Number(editStock),
         description: editDesc.trim(),
         image: editImage || undefined,
+        category: editCategory,
       })
       return "Produto atualizado."
     })
@@ -183,6 +220,7 @@ export default function ProdutosPage() {
                 stock: product.stock,
                 description: product.description,
                 image: product.image,
+                category: categoryOf(product),
               })
               const updatedProducts = await reload()
               setSelected(
@@ -280,9 +318,14 @@ export default function ProdutosPage() {
               <p className="mt-1 text-xs font-semibold text-zinc-500">
                 {formatMoney(product.price)}
               </p>
-              <Badge className="mt-2 bg-zinc-100 text-xs text-zinc-700">
-                {product.stock} em estoque
-              </Badge>
+              <div className="mt-2 flex flex-wrap gap-1">
+                <Badge className="bg-zinc-100 text-xs text-zinc-700">
+                  {product.stock} em estoque
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {CATEGORY_LABELS[categoryOf(product)]}
+                </Badge>
+              </div>
             </button>
           ))}
         </div>
@@ -311,6 +354,12 @@ export default function ProdutosPage() {
                 </p>
                 <p className="mt-1 text-sm font-semibold">
                   {formatMoney(selected.price)}
+                </p>
+                <p className="mt-3 text-sm font-semibold text-zinc-500">
+                  Categoria
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  {CATEGORY_LABELS[categoryOf(selected)]}
                 </p>
                 <p className="mt-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                   {selected.stock} itens no estoque
@@ -386,6 +435,7 @@ export default function ProdutosPage() {
                 placeholder="24,90"
               />
             </label>
+            <CategorySelect value={newCategory} onChange={setNewCategory} />
             <label className="grid gap-1 text-sm font-semibold">
               Estoque
               <input
@@ -474,6 +524,7 @@ export default function ProdutosPage() {
                 placeholder="24,90"
               />
             </label>
+            <CategorySelect value={editCategory} onChange={setEditCategory} />
             <label className="grid gap-1 text-sm font-semibold">
               Estoque
               <input

@@ -35,7 +35,7 @@ const navItems = [
   { label: "Comandas", href: "/comandas", icon: ReceiptText },
   { label: "Caixa", href: "/caixa", icon: Banknote },
   { label: "Produtos", href: "/produtos", icon: PackageSearch },
-  { label: "Musicas", href: "/musicas", icon: Music },
+  { label: "Músicas", href: "/musicas", icon: Music },
 ]
 
 export function AppSidebar() {

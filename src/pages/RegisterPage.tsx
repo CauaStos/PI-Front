@@ -60,7 +60,7 @@ export function RegisterPage() {
   return (
     <AuthShell
       title="Criar conta"
-      subtitle="O cadastro cria um funcionário com perfil de garçom."
+      subtitle="O cadastro cria um funcionário com perfil de operador."
       footer={
         <p className="text-sm text-zinc-500">
           Já tem conta?{" "}

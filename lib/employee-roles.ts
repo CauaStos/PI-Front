@@ -16,6 +16,13 @@ export type Employee = {
   createdAt?: string
 }
 
+/** Converte papeis antigos (admin/garcom/cozinha) para o equivalente atual. */
+export function normalizeEmployeeRole(role: EmployeeRole): EmployeeRole {
+  if (role === "admin") return "ADMIN"
+  if (role === "garcom" || role === "cozinha") return "OPERADOR"
+  return role
+}
+
 export function isAdminEmployeeRole(role: string) {
   return role === "admin" || role === "ADMIN"
 }

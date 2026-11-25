@@ -11,10 +11,20 @@ export interface BarRow {
 export function BarList({
   rows,
   ariaLabel,
+  formatValue = (v) => v.toLocaleString("pt-BR"),
+  wideValue = false,
+  emptyText = "Sem dados no periodo",
 }: {
   rows: BarRow[]
   ariaLabel: string
+  formatValue?: (value: number) => string
+  /** Coluna de valor mais larga, para moeda. */
+  wideValue?: boolean
+  emptyText?: string
 }) {
+  if (rows.length === 0) {
+    return <p className="py-6 text-center text-xs text-muted-foreground">{emptyText}</p>
+  }
   const max = Math.max(1, ...rows.map((r) => r.value))
 
   return (
@@ -22,9 +32,13 @@ export function BarList({
       {rows.map((row) => (
         <li
           key={row.key}
-          className="grid grid-cols-[88px_minmax(0,1fr)_36px] items-center gap-3 text-[13px]"
+          className={`grid items-center gap-3 text-[13px] ${
+            wideValue
+              ? "grid-cols-[minmax(96px,1.4fr)_minmax(48px,1fr)_88px]"
+              : "grid-cols-[minmax(96px,1.4fr)_minmax(48px,1fr)_36px]"
+          }`}
         >
-          <span className="truncate font-medium text-muted-foreground">
+          <span className="truncate font-medium text-muted-foreground" title={row.label}>
             {row.label}
           </span>
           <span className="h-3 rounded-r-[4px] bg-muted">
@@ -35,7 +49,9 @@ export function BarList({
               }}
             />
           </span>
-          <span className="text-right font-bold tabular-nums">{row.value}</span>
+          <span className="text-right font-bold tabular-nums whitespace-nowrap">
+            {formatValue(row.value)}
+          </span>
         </li>
       ))}
     </ul>

@@ -1,17 +1,26 @@
 import {
-  ClipboardList,
+  Ban,
+  Hourglass,
+  ListMusic,
   Loader2,
-  PackageSearch,
-  UserPlus,
-  Users,
+  Music,
+  Receipt,
+  TrendingUp,
+  Wallet,
 } from "lucide-react"
-import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Link, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { RetryState } from "@/components/retry-state"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useBoardChanged } from "@/features/comandas/hooks/useBoardChanged"
-import { fetchDashboard, type DashboardData } from "@/features/dashboard/api"
+import {
+  DASHBOARD_RANGES,
+  fetchDashboard,
+  type DashboardData,
+  type DashboardRange,
+} from "@/features/dashboard/api"
 import { BarList } from "@/features/dashboard/components/BarList"
 import { ChartCard } from "@/features/dashboard/components/ChartCard"
 import {
@@ -20,13 +29,36 @@ import {
 } from "@/features/dashboard/components/ColumnChart"
 import { StatTile } from "@/features/dashboard/components/StatTile"
 import { ApiError } from "@/lib/api"
+import { format as formatMoney, MONEY_SCALE } from "@/lib/money"
 import { CATEGORY_LABELS } from "@/lib/product-categories"
+
+type Section = "faturamento" | "musicas"
 
 const MONTHS = [
   "jan", "fev", "mar", "abr", "mai", "jun",
   "jul", "ago", "set", "out", "nov", "dez",
 ]
 const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"]
+const CHART_HEIGHT = "h-36"
+
+const compactBrl = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  notation: "compact",
+  maximumFractionDigits: 1,
+})
+
+/** Eixo dos graficos de dinheiro: "R$ 1,2 mil". */
+function formatMoneyAxis(minor: number) {
+  return compactBrl.format(minor / MONEY_SCALE)
+}
+
+function parseRange(raw: string | null): DashboardRange {
+  const n = Number(raw)
+  return (DASHBOARD_RANGES as readonly number[]).includes(n)
+    ? (n as DashboardRange)
+    : 7
+}
 
 /** "2026-11-22" -> { day: 22, month: "nov", weekday: "dom" } sem fuso. */
 function parseDay(date: string) {
@@ -35,63 +67,100 @@ function parseDay(date: string) {
   return { day: d, month: MONTHS[m - 1]!, weekday: WEEKDAYS[weekday]! }
 }
 
-function monthLabel(month: string) {
-  const [y, m] = month.split("-").map(Number) as [number, number]
-  return `${MONTHS[m - 1]} ${y}`
+function formatMinutes(minutes: number | null) {
+  if (minutes === null) return "—"
+  if (minutes < 60) return `${minutes} min`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m ? `${h}h ${m}min` : `${h}h`
 }
 
-function signupColumns(daily: DashboardData["monthlySignups"]["daily"]): Column[] {
-  return daily.map(({ date, count }, i) => {
-    const { day, month } = parseDay(date)
-    const showLabel = day === 1 || day % 5 === 0 || i === daily.length - 1
-    return {
-      key: date,
-      axisLabel: showLabel ? String(day) : "",
-      tooltipLabel: `${day} ${month}`,
-      value: count,
-    }
-  })
+/** "+12% vs 7 dias anteriores" ou texto alternativo quando nao ha base. */
+function comparison(current: number, previous: number, days: number) {
+  if (previous === 0) return `sem registros nos ${days} dias anteriores`
+  const pct = Math.round(((current - previous) / previous) * 100)
+  return `${pct >= 0 ? "+" : ""}${pct}% vs ${days} dias anteriores`
 }
 
-function weekColumns(days: DashboardData["ordersLast7Days"]): Column[] {
-  return days.map(({ date, count }) => {
+/** Colunas por dia; rotulos espacados conforme o tamanho da janela. */
+function dayColumns(points: Array<{ date: string; value: number }>): Column[] {
+  const every = points.length <= 7 ? 1 : points.length <= 14 ? 2 : 5
+  return points.map(({ date, value }, i) => {
     const { day, month, weekday } = parseDay(date)
-    return {
-      key: date,
-      axisLabel: weekday,
-      tooltipLabel: `${weekday}, ${day} ${month}`,
-      value: count,
-    }
+    const axisLabel =
+      points.length <= 7
+        ? weekday
+        : i === points.length - 1 || (points.length - 1 - i) % every === 0
+          ? String(day)
+          : ""
+    return { key: date, axisLabel, tooltipLabel: `${weekday}, ${day} ${month}`, value }
   })
+}
+
+function hourColumns(hours: Array<{ hour: number; value: number }>): Column[] {
+  return hours.map(({ hour, value }) => ({
+    key: String(hour),
+    axisLabel: hour % 3 === 0 ? `${hour}h` : "",
+    tooltipLabel: `${hour}h–${hour + 1}h`,
+    value,
+  }))
+}
+
+function peakHour(hours: Array<{ hour: number; value: number }>) {
+  const peak = hours.reduce((best, h) => (h.value > best.value ? h : best), {
+    hour: 0,
+    value: 0,
+  })
+  return peak.value > 0 ? `pico ${peak.hour}h–${peak.hour + 1}h` : "sem registros"
 }
 
 export default function DashboardPage() {
+  const [params, setParams] = useSearchParams()
+  const section: Section = params.get("aba") === "musicas" ? "musicas" : "faturamento"
+  const days = parseRange(params.get("dias"))
+
   const [stats, setStats] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
   const [forbidden, setForbidden] = useState(false)
-  const [retrying, setRetrying] = useState(false)
+  const latest = useRef(0)
 
-  async function reload() {
-    setRetrying(true)
+  const reload = useCallback(async () => {
+    const id = ++latest.current
+    setLoading(true)
     try {
-      setStats(await fetchDashboard())
+      const data = await fetchDashboard(days)
+      if (id !== latest.current) return
+      setStats(data)
       setError(false)
     } catch (cause) {
+      if (id !== latest.current) return
       setForbidden(cause instanceof ApiError && cause.status === 403)
       setError(true)
     } finally {
-      setRetrying(false)
+      if (id === latest.current) setLoading(false)
     }
-  }
+  }, [days])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void reload()
-  }, [])
+  }, [reload])
 
   useBoardChanged(() => {
     void reload()
   })
+
+  function update(key: "aba" | "dias", value: string) {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set(key, value)
+        return next
+      },
+      { replace: true }
+    )
+  }
 
   if (forbidden) {
     return (
@@ -101,7 +170,7 @@ export default function DashboardPage() {
           <p className="text-sm text-muted-foreground">
             O dashboard é restrito a administradores e gerentes.
           </p>
-          <Button render={<Link to="/comandas" />}>Voltar às comandas</Button>
+          <Button nativeButton={false} render={<Link to="/comandas" />}>Voltar às comandas</Button>
         </section>
       </main>
     )
@@ -113,7 +182,7 @@ export default function DashboardPage() {
         <RetryState
           message="Não foi possível carregar o dashboard."
           onRetry={() => void reload()}
-          loading={retrying}
+          loading={loading}
         />
       </main>
     )
@@ -127,122 +196,206 @@ export default function DashboardPage() {
     )
   }
 
-  const { activeUsers, monthlySignups, pendingRecords, byCategory } = stats
-  const totalProducts = byCategory.reduce((s, c) => s + c.products, 0)
-  const totalSold = byCategory.reduce((s, c) => s + c.itemsSold, 0)
-  const ordersThisWeek = stats.ordersLast7Days.reduce((s, d) => s + d.count, 0)
+  const { money, songs, operations } = stats
+  const n = stats.days
   const updatedAt = new Intl.DateTimeFormat("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(stats.generatedAt))
 
   return (
-    <main className="min-h-svh bg-background px-10 py-8 text-foreground max-sm:px-5">
-      <div className="mx-auto max-w-290">
-        <div className="flex items-baseline justify-between gap-4">
+    <main className="min-h-svh bg-background px-8 py-6 text-foreground max-sm:px-4">
+      <Tabs
+        value={section}
+        onValueChange={(v) => update("aba", String(v))}
+        className="mx-auto max-w-290 gap-4"
+      >
+        <header className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <h1 className="text-[22px] font-bold tracking-normal">Dashboard</h1>
-          <p className="text-xs font-medium text-muted-foreground">
-            Atualizado as {updatedAt}
-          </p>
-        </div>
+          <TabsList className="h-8 bg-muted">
+            <TabsTrigger value="faturamento" className="px-3 text-xs font-bold">
+              Faturamento
+            </TabsTrigger>
+            <TabsTrigger value="musicas" className="px-3 text-xs font-bold">
+              Músicas
+            </TabsTrigger>
+          </TabsList>
+          <div className="ml-auto flex items-center gap-3">
+            {loading ? (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            ) : (
+              <span className="text-xs font-medium text-muted-foreground max-sm:hidden">
+                Atualizado às {updatedAt}
+              </span>
+            )}
+            <Tabs value={String(days)} onValueChange={(v) => update("dias", String(v))}>
+              <TabsList className="h-8 bg-muted" aria-label="Período">
+                {DASHBOARD_RANGES.map((r) => (
+                  <TabsTrigger key={r} value={String(r)} className="px-2.5 text-xs font-bold">
+                    {r} dias
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+        </header>
 
-        <section
-          aria-label="Indicadores"
-          className="mt-4 grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1"
-        >
-          <StatTile
-            icon={Users}
-            label="Usuarios ativos"
-            value={activeUsers.count}
-            hint={`com sessao aberta, de ${activeUsers.total} funcionarios`}
-          />
-          <StatTile
-            icon={UserPlus}
-            label="Cadastros do mes"
-            value={monthlySignups.count}
-            hint={`${monthlySignups.previousMonth} no mes anterior`}
-          />
-          <StatTile
-            icon={ClipboardList}
-            label="Registros pendentes"
-            value={pendingRecords.total}
-            hint="pedidos, comandas e musicas"
-          />
-          <StatTile
-            icon={PackageSearch}
-            label="Produtos cadastrados"
-            value={totalProducts}
-            hint={`em ${byCategory.filter((c) => c.products > 0).length} categorias`}
-          />
-        </section>
+        <TabsContent value="faturamento" className="grid gap-3">
+          <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
+            <StatTile
+              icon={TrendingUp}
+              label={`Faturamento (${n} dias)`}
+              value={formatMoney(money.total)}
+              hint={comparison(money.total, money.previousTotal, n)}
+            />
+            <StatTile
+              icon={Wallet}
+              label="Faturamento hoje"
+              value={formatMoney(money.today)}
+              hint={`${operations.openTabs} comandas abertas · ${operations.ordersInProgress} pedidos em preparo`}
+            />
+            <StatTile
+              icon={Receipt}
+              label="Ticket médio"
+              value={formatMoney(money.averageTicket)}
+              hint={`${money.finishedTabs} comandas · permanência ${formatMinutes(operations.averageTabMinutes)}`}
+            />
+            <StatTile
+              icon={Music}
+              label={`Músicas tocadas (${n} dias)`}
+              value={songs.played}
+              hint={`${songs.queued} na fila agora`}
+            />
+          </div>
 
-        <section
-          aria-label="Graficos"
-          className="mt-3 grid grid-cols-3 gap-3 max-lg:grid-cols-1"
-        >
-          <div className="col-span-2 max-lg:col-span-1">
-            <ChartCard
-              title="Cadastros do mes"
-              subtitle={`Novos funcionarios por dia, ${monthLabel(monthlySignups.month)}`}
-            >
+          <div className="grid grid-cols-3 gap-3 max-lg:grid-cols-1">
+            <div className="col-span-2 max-lg:col-span-1">
+              <ChartCard title="Faturamento por dia" subtitle={`Últimos ${n} dias`}>
+                <ColumnChart
+                  columns={dayColumns(money.daily.map((d) => ({ date: d.date, value: d.revenue })))}
+                  ariaLabel={`Faturamento por dia nos últimos ${n} dias`}
+                  formatValue={formatMoney}
+                  formatAxis={formatMoneyAxis}
+                  heightClass={CHART_HEIGHT}
+                />
+              </ChartCard>
+            </div>
+            <ChartCard title="Produtos que mais faturam" subtitle="Top 5 (qtd. vendida)">
+              <BarList
+                ariaLabel="Produtos com maior faturamento"
+                wideValue
+                formatValue={formatMoney}
+                rows={money.topProducts.map((p) => ({
+                  key: p.name,
+                  label: `${p.name} (${p.quantity})`,
+                  value: p.revenue,
+                }))}
+              />
+            </ChartCard>
+            <ChartCard title="Por categoria">
+              <BarList
+                ariaLabel="Faturamento por categoria"
+                wideValue
+                formatValue={formatMoney}
+                rows={money.byCategory
+                  .filter((c) => c.revenue > 0)
+                  .map((c) => ({
+                    key: c.category,
+                    label: CATEGORY_LABELS[c.category],
+                    value: c.revenue,
+                  }))}
+              />
+            </ChartCard>
+            <ChartCard title="Por hora do pedido" subtitle={peakHour(money.byHour)}>
               <ColumnChart
-                columns={signupColumns(monthlySignups.daily)}
-                unit={["cadastro", "cadastros"]}
-                ariaLabel="Cadastros de funcionarios por dia no mes corrente"
+                columns={hourColumns(money.byHour)}
+                ariaLabel="Faturamento por hora do pedido"
+                formatValue={formatMoney}
+                formatAxis={formatMoneyAxis}
+                heightClass={CHART_HEIGHT}
+              />
+            </ChartCard>
+            <ChartCard title="Por funcionário">
+              <BarList
+                ariaLabel="Faturamento por funcionário"
+                wideValue
+                formatValue={formatMoney}
+                rows={money.byEmployee.map((e) => ({
+                  key: e.name,
+                  label: e.name,
+                  value: e.revenue,
+                }))}
               />
             </ChartCard>
           </div>
-          <ChartCard
-            title="Registros pendentes"
-            subtitle={`${pendingRecords.total} aguardando atendimento`}
-          >
-            <BarList
-              ariaLabel="Registros pendentes por tipo"
-              rows={[
-                { key: "orders", label: "Pedidos", value: pendingRecords.orders },
-                { key: "tabs", label: "Comandas", value: pendingRecords.tabs },
-                { key: "songs", label: "Musicas", value: pendingRecords.songs },
-              ]}
+        </TabsContent>
+
+        <TabsContent value="musicas" className="grid gap-3">
+          <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
+            <StatTile
+              icon={Music}
+              label={`Tocadas (${n} dias)`}
+              value={songs.played}
+              hint={comparison(songs.played, songs.previousPlayed, n)}
             />
-          </ChartCard>
-          <ChartCard
-            title="Produtos por categoria"
-            subtitle={`${totalProducts} no cardapio`}
-          >
-            <BarList
-              ariaLabel="Quantidade de produtos por categoria"
-              rows={byCategory.map((c) => ({
-                key: c.category,
-                label: CATEGORY_LABELS[c.category],
-                value: c.products,
-              }))}
+            <StatTile
+              icon={ListMusic}
+              label="Na fila agora"
+              value={songs.queued}
+              hint={songs.playing ? `tocando: ${songs.playing}` : "nada tocando agora"}
             />
-          </ChartCard>
-          <ChartCard
-            title="Itens vendidos por categoria"
-            subtitle={`${totalSold} itens pedidos, exceto cancelados`}
-          >
-            <BarList
-              ariaLabel="Itens vendidos por categoria"
-              rows={byCategory.map((c) => ({
-                key: c.category,
-                label: CATEGORY_LABELS[c.category],
-                value: c.itemsSold,
-              }))}
+            <StatTile
+              icon={Hourglass}
+              label="Espera média"
+              value={formatMinutes(songs.averageWaitMinutes)}
+              hint="do pedido até começar a tocar"
             />
-          </ChartCard>
-          <ChartCard
-            title="Pedidos nos ultimos 7 dias"
-            subtitle={`${ordersThisWeek} pedidos na semana`}
-          >
-            <ColumnChart
-              columns={weekColumns(stats.ordersLast7Days)}
-              unit={["pedido", "pedidos"]}
-              ariaLabel="Pedidos por dia nos ultimos 7 dias"
+            <StatTile
+              icon={Ban}
+              label="Canceladas"
+              value={songs.cancelled}
+              hint={`${songs.requested > 0 ? Math.round((songs.cancelled / songs.requested) * 100) : 0}% de ${songs.requested} pedidas`}
             />
-          </ChartCard>
-        </section>
-      </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 max-lg:grid-cols-1">
+            <div className="col-span-2 max-lg:col-span-1">
+              <ChartCard title="Tocadas por dia" subtitle={`Últimos ${n} dias · ${songs.playedToday} hoje`}>
+                <ColumnChart
+                  columns={dayColumns(songs.daily.map((d) => ({ date: d.date, value: d.count })))}
+                  unit={["música", "músicas"]}
+                  ariaLabel={`Músicas tocadas por dia nos últimos ${n} dias`}
+                  heightClass={CHART_HEIGHT}
+                />
+              </ChartCard>
+            </div>
+            <ChartCard title="Mais pedidas" subtitle="Top 5">
+              <BarList
+                ariaLabel="Músicas mais pedidas"
+                emptyText="Nenhuma música pedida no período"
+                rows={songs.topSongs.map((s) => ({ key: s.title, label: s.title, value: s.count }))}
+              />
+            </ChartCard>
+            <div className="col-span-2 max-lg:col-span-1">
+              <ChartCard title="Pedidos por hora" subtitle={peakHour(songs.requestsByHour)}>
+                <ColumnChart
+                  columns={hourColumns(songs.requestsByHour)}
+                  unit={["pedido", "pedidos"]}
+                  ariaLabel="Músicas pedidas por hora"
+                  heightClass={CHART_HEIGHT}
+                />
+              </ChartCard>
+            </div>
+            <ChartCard title="Mesas que mais pedem" subtitle="Top 5">
+              <BarList
+                ariaLabel="Mesas que mais pediram músicas"
+                emptyText="Nenhuma música pedida no período"
+                rows={songs.topTabs.map((t) => ({ key: t.tabName, label: t.tabName, value: t.count }))}
+              />
+            </ChartCard>
+          </div>
+        </TabsContent>
+      </Tabs>
     </main>
   )
 }

@@ -37,6 +37,7 @@ import {
   isClosedOnDay,
   isVisibleInToday,
   nextComandaName,
+  nextComandaNumber,
   sortComandasForBoard,
 } from "../shared"
 
@@ -124,7 +125,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   async function createComanda() {
     const ok = await mutate(async () => {
       await api.post("/tabs", {
-        tableName: nextComandaName(comandas.length + 1),
+        tableName: nextComandaName(nextComandaNumber(comandas)),
       })
       return "Comanda criada."
     })
@@ -139,7 +140,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     if (!selected) return false
     if (!isTabActive(selected)) {
       toast.error(
-        "Esta comanda esta finalizada ou cancelada e nao aceita novos pedidos."
+        "Esta comanda está finalizada ou cancelada e não aceita novos pedidos."
       )
       return false
     }
@@ -161,12 +162,12 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
     payload: { product: string; employee: string; quantity: number }
   ): Promise<boolean> {
     if (selected && !isTabActive(selected)) {
-      toast.error("Comanda finalizada ou cancelada nao permite editar pedidos.")
+      toast.error("Comanda finalizada ou cancelada não permite editar pedidos.")
       return false
     }
     if (!canEditOrder(order)) {
       toast.error(
-        "Pedidos entregues, concluidos ou cancelados nao podem ser editados."
+        "Pedidos entregues, concluídos ou cancelados não podem ser editados."
       )
       return false
     }
@@ -201,11 +202,11 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   async function updateOrderStatus(order: ComandaOrder, status: OrderStatus) {
     if (order.status === status) return
     if (selected && !isTabActive(selected)) {
-      toast.error("Comanda finalizada ou cancelada nao permite alterar pedidos.")
+      toast.error("Comanda finalizada ou cancelada não permite alterar pedidos.")
       return
     }
     if (order.status === "cancelled") {
-      toast.error("Um pedido cancelado nao pode mudar de status.")
+      toast.error("Um pedido cancelado não pode mudar de status.")
       return
     }
     await mutate(async () => {
@@ -234,7 +235,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
       }
       if (billableOrderCount(pendingAction.comanda) === 0) {
         setPendingAction(null)
-        toast.error("Nao e possivel finalizar uma comanda sem pedidos ativos.")
+        toast.error("Não é possível finalizar uma comanda sem pedidos ativos.")
         return
       }
       ok = await mutate(async () => {
@@ -294,7 +295,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
                   Hoje
                 </TabsTrigger>
                 <TabsTrigger value="history" className="px-3 text-xs font-bold">
-                  <History className="size-3.5" /> Historico
+                  <History className="size-3.5" /> Histórico
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -382,7 +383,7 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
       <CreateComandaDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        comandaName={nextComandaName(comandas.length + 1)}
+        comandaName={nextComandaName(nextComandaNumber(comandas))}
         isMutating={isMutating}
         onConfirm={createComanda}
       />

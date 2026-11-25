@@ -192,7 +192,7 @@ export function OrdersTable({
                   <TableCell className="px-2 text-right max-lg:text-left">
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        aria-label={`Acoes do pedido ${order.productName}`}
+                        aria-label={`Ações do pedido ${order.productName}`}
                         className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                       >
                         <MoreHorizontal className="size-4" />

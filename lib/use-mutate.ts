@@ -26,7 +26,7 @@ export function useMutate(
       toast.success(text)
       return true
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Operacao falhou.")
+      toast.error(err instanceof Error ? err.message : "Operação falhou.")
       return false
     } finally {
       setIsMutating(false)

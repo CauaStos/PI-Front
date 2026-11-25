@@ -25,10 +25,10 @@ export function CashPanel({
       <CardContent className="space-y-3 px-0 text-sm">
         <Metric icon={Calendar} label="Caixa de hoje" value={cashDate} />
         <Metric icon={Clock3} label="Virada" value="00:00" />
-        <Metric icon={Clock3} label="Proxima virada" value="Amanha, 00:00" />
+        <Metric icon={Clock3} label="Próxima virada" value="Amanhã, 00:00" />
         <Metric
           icon={CircleDollarSign}
-          label="Balanca"
+          label="Balança"
           value={formatMoney(totalRevenue)}
         />
         <Metric

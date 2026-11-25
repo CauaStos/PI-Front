@@ -82,7 +82,7 @@ export function EditOrderDialog({
         <DialogHeader>
           <DialogTitle>Editar pedido</DialogTitle>
           <DialogDescription>
-            Altere produto, funcionario ou quantidade do pedido.
+            Altere produto, funcionário ou quantidade do pedido.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
@@ -117,7 +117,7 @@ export function EditOrderDialog({
             Cancelar
           </Button>
           <Button onClick={saveEditOrder} disabled={isMutating || !quantityValid}>
-            {isMutating ? "Salvando..." : "Salvar alteracoes"}
+            {isMutating ? "Salvando..." : "Salvar alterações"}
           </Button>
         </DialogFooter>
       </DialogContent>

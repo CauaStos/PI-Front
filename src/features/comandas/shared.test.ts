@@ -13,6 +13,7 @@ import {
   isTabActive,
   isVisibleInToday,
   nextComandaName,
+  nextComandaNumber,
   sortComandasForBoard,
 } from "./shared"
 
@@ -99,6 +100,16 @@ describe("nomes", () => {
   it("nextComandaName preenche com zero", () => {
     expect(nextComandaName(1)).toBe("Comanda 01")
     expect(nextComandaName(42)).toBe("Comanda 42")
+  })
+
+  it("nextComandaNumber usa o menor numero livre entre as abertas", () => {
+    const c = (tableName: string, status: string) => ({ tableName, status }) as never
+    expect(nextComandaNumber([])).toBe(1)
+    expect(
+      nextComandaNumber([c("Mesa 01", "open"), c("Comanda 02", "in_progress"), c("Mesa 04", "open")])
+    ).toBe(3)
+    // encerradas nao ocupam numero, mesmo que sejam muitas
+    expect(nextComandaNumber([c("Mesa 01", "finished"), c("Mesa 170", "cancelled")])).toBe(1)
   })
 
   it("displayComandaName troca Mesa por Comanda", () => {

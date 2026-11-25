@@ -93,7 +93,7 @@ export function StockHint({
   return (
     <span className="text-xs font-medium text-muted-foreground">
       {stock} em estoque
-      {quantity > stock ? " - quantidade acima do disponivel" : ""}
+      {quantity > stock ? " - quantidade acima do disponível" : ""}
     </span>
   )
 }

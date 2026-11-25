@@ -69,7 +69,7 @@ describe("validateReset", () => {
   it("exige token", () => {
     expect(
       validateReset({ password: "12345678", confirmation: "12345678", token: null })
-    ).toMatch(/Link de redefinicao/)
+    ).toMatch(/Link de redefinição/)
   })
 
   it("valida senha e confirmacao quando ha token", () => {

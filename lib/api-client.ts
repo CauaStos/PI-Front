@@ -64,7 +64,7 @@ export function createApiClient({
       if (response.status === 401) {
         invalidate()
         onUnauthorized?.()
-        throw new ApiError("Sessao expirada. Faca login novamente.", 401)
+        throw new ApiError("Sessão expirada. Faça login novamente.", 401)
       }
     }
 

@@ -96,7 +96,7 @@ export default function MusicasPage() {
       setLoadError(
         err instanceof Error
           ? err.message
-          : "Erro ao carregar a fila de musicas."
+          : "Erro ao carregar a fila de músicas."
       )
     } finally {
       setLoading(false)
@@ -118,7 +118,7 @@ export default function MusicasPage() {
   function openAddDialog() {
     const firstTab = activeTabs[0]
     if (!firstTab) {
-      toast.error("Abra uma comanda antes de adicionar uma musica.")
+      toast.error("Abra uma comanda antes de adicionar uma música.")
       return
     }
 
@@ -143,7 +143,7 @@ export default function MusicasPage() {
       toast.error(
         err instanceof Error
           ? err.message
-          : "Nao foi possivel adicionar a musica."
+          : "Não foi possível adicionar a música."
       )
     } finally {
       setIsMutating(false)
@@ -180,7 +180,7 @@ export default function MusicasPage() {
       toast.error(
         err instanceof Error
           ? err.message
-          : "Nao foi possivel alterar a posicao da musica."
+          : "Não foi possível alterar a posição da música."
       )
     } finally {
       setIsMutating(false)
@@ -246,7 +246,7 @@ export default function MusicasPage() {
         toast.success(
           result.current
             ? `Agora tocando: "${result.current.title}".`
-            : "A musica atual foi finalizada. A fila esta vazia."
+            : "A música atual foi finalizada. A fila está vazia."
         )
       } else {
         await api.delete(`/songs/${pendingAction.song.id}`)
@@ -255,7 +255,7 @@ export default function MusicasPage() {
       }
       setPendingAction(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Operacao falhou.")
+      toast.error(err instanceof Error ? err.message : "Operação falhou.")
     } finally {
       setIsMutating(false)
     }
@@ -289,15 +289,15 @@ export default function MusicasPage() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-[22px] font-bold tracking-normal">
-              Fila de musicas
+              Fila de músicas
             </h1>
             <p className="mt-1 text-sm font-medium text-muted-foreground">
-              Gerencie os pedidos das comandas e organize a ordem das musicas.
+              Gerencie os pedidos das comandas e organize a ordem das músicas.
             </p>
           </div>
           {canManageQueue ? (
             <Button onClick={openAddDialog} disabled={isMutating}>
-              <Plus className="size-4" /> Adicionar musica
+              <Plus className="size-4" /> Adicionar música
             </Button>
           ) : (
             <Badge variant="outline">Somente visualizacao</Badge>
@@ -313,7 +313,7 @@ export default function MusicasPage() {
               <p className="mt-1 text-sm font-medium text-muted-foreground">
                 {currentSong
                   ? `${currentSong.title} - ${displayComandaName(currentSong.tabName)}`
-                  : "Nenhuma musica em execucao."}
+                  : "Nenhuma música em execução."}
               </p>
             </div>
             {canManageQueue ? (
@@ -323,7 +323,7 @@ export default function MusicasPage() {
                 disabled={isMutating || songs.length === 0}
               >
                 <SkipForward className="size-4" />
-                {currentSong ? "Proxima musica" : "Iniciar proxima"}
+                {currentSong ? "Próxima música" : "Iniciar próxima"}
               </Button>
             ) : null}
           </CardHeader>
@@ -333,7 +333,7 @@ export default function MusicasPage() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="flex items-center gap-2 text-lg font-bold">
-                <ListMusic className="size-5" /> Proximas musicas
+                <ListMusic className="size-5" /> Próximas músicas
               </h2>
               {canReorder ? (
                 <p className="mt-0.5 text-xs font-medium text-muted-foreground">
@@ -347,7 +347,7 @@ export default function MusicasPage() {
           {queuedSongs.length === 0 ? (
             <Card className="rounded-[18px] border-dashed shadow-none">
               <CardContent className="py-12 text-center text-sm font-medium text-muted-foreground">
-                A fila esta vazia. Adicione a primeira musica para comecar.
+                A fila está vazia. Adicione a primeira música para começar.
               </CardContent>
             </Card>
           ) : (
@@ -383,7 +383,7 @@ export default function MusicasPage() {
                           title={
                             canReorder
                               ? "Arraste para reordenar"
-                              : "Adicione mais musicas para reordenar"
+                              : "Adicione mais músicas para reordenar"
                           }
                           className={cn(
                             "flex shrink-0 items-center text-muted-foreground",
@@ -426,7 +426,7 @@ export default function MusicasPage() {
                             variant="ghost"
                             size="icon"
                             aria-label={`Subir ${song.title} na fila`}
-                            title="Subir uma posicao"
+                            title="Subir uma posição"
                             onClick={() => void moveSong(song.id, index)}
                             disabled={isMutating || isFirst}
                           >
@@ -436,7 +436,7 @@ export default function MusicasPage() {
                             variant="ghost"
                             size="icon"
                             aria-label={`Descer ${song.title} na fila`}
-                            title="Descer uma posicao"
+                            title="Descer uma posição"
                             onClick={() => void moveSong(song.id, index + 2)}
                             disabled={isMutating || isLast}
                           >
@@ -446,7 +446,7 @@ export default function MusicasPage() {
                             variant="ghost"
                             size="icon"
                             aria-label={`Cancelar ${song.title}`}
-                            title="Cancelar musica"
+                            title="Cancelar música"
                             onClick={() =>
                               setPendingAction({ type: "cancel", song })
                             }
@@ -468,15 +468,15 @@ export default function MusicasPage() {
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar musica a fila</DialogTitle>
+            <DialogTitle>Adicionar música à fila</DialogTitle>
             <DialogDescription>
-              A musica entra no fim da fila e fica vinculada a comanda
+              A música entra no fim da fila e fica vinculada à comanda
               solicitante.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
             <label className="grid gap-1 text-sm font-semibold">
-              Musica
+              Música
               <input
                 className="h-9 rounded-lg border border-input bg-background px-3"
                 value={title}
@@ -508,7 +508,7 @@ export default function MusicasPage() {
               onClick={addSong}
               disabled={isMutating || !title.trim() || !tabId}
             >
-              {isMutating ? "Adicionando..." : "Adicionar musica"}
+              {isMutating ? "Adicionando..." : "Adicionar música"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -523,13 +523,13 @@ export default function MusicasPage() {
             <DialogTitle>
               {pendingAction?.type === "advance"
                 ? "Avancar fila"
-                : "Cancelar musica"}
+                : "Cancelar música"}
             </DialogTitle>
             <DialogDescription>
               {pendingAction?.type === "advance"
                 ? currentSong
-                  ? `Finalizar "${currentSong.title}" e iniciar a proxima musica da fila?`
-                  : "Iniciar a proxima musica da fila?"
+                  ? `Finalizar "${currentSong.title}" e iniciar a próxima música da fila?`
+                  : "Iniciar a próxima música da fila?"
                 : `Cancelar "${pendingAction?.song.title}"? As posicoes restantes serao reorganizadas.`}
             </DialogDescription>
           </DialogHeader>

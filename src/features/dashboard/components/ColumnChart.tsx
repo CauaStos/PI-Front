@@ -16,11 +16,25 @@ export function ColumnChart({
   columns,
   unit,
   ariaLabel,
+  formatValue,
+  formatAxis,
 }: {
   columns: Column[]
-  unit: [singular: string, plural: string]
+  /** Unidade contada (ex.: pedidos). Ignorada quando `formatValue` e passado. */
+  unit?: [singular: string, plural: string]
   ariaLabel: string
+  /** Formata o valor no tooltip (ex.: moeda). */
+  formatValue?: (value: number) => string
+  /** Formata os rotulos da grade; usa uma coluna de eixo mais larga. */
+  formatAxis?: (value: number) => string
 }) {
+  const axis = formatAxis ? "w-14" : "w-6"
+  const offset = formatAxis ? "left-16" : "left-8"
+  const labelOffset = formatAxis ? "ml-16" : "ml-8"
+  const describe = (value: number) =>
+    formatValue
+      ? formatValue(value)
+      : `${value} ${unit ? (value === 1 ? unit[0] : unit[1]) : ""}`.trim()
   const max = Math.max(1, ...columns.map((c) => c.value))
   const top = niceCeil(max)
 
@@ -34,21 +48,20 @@ export function ColumnChart({
             className="absolute inset-x-0 flex items-center gap-2"
             style={{ bottom: `${f * 100}%` }}
           >
-            <span className="w-6 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
-              {Math.round(top * f)}
+            <span className={`${axis} shrink-0 text-right text-[10px] tabular-nums text-muted-foreground`}>
+              {formatAxis ? formatAxis(top * f) : Math.round(top * f)}
             </span>
             <span className="h-px flex-1 bg-viz-grid" />
           </div>
         ))}
-        <div className="absolute inset-y-0 right-0 left-8 flex items-end gap-0.5 border-b border-border">
+        <div className={`absolute inset-y-0 right-0 ${offset} flex items-end gap-0.5 border-b border-border`}>
           {columns.map((column) => {
             const height = (column.value / top) * 100
-            const word = column.value === 1 ? unit[0] : unit[1]
             return (
               <div
                 key={column.key}
                 tabIndex={0}
-                aria-label={`${column.tooltipLabel}: ${column.value} ${word}`}
+                aria-label={`${column.tooltipLabel}: ${describe(column.value)}`}
                 className="group relative flex h-full min-w-0 flex-1 items-end justify-center outline-none"
               >
                 <div
@@ -59,15 +72,16 @@ export function ColumnChart({
                   <span className="font-medium text-muted-foreground">
                     {column.tooltipLabel}
                   </span>{" "}
-                  <span className="font-bold tabular-nums">{column.value}</span>{" "}
-                  {word}
+                  <span className="font-bold tabular-nums">
+                    {describe(column.value)}
+                  </span>
                 </div>
               </div>
             )
           })}
         </div>
       </div>
-      <div className="mt-1 ml-8 flex gap-0.5">
+      <div className={`mt-1 ${labelOffset} flex gap-0.5`}>
         {columns.map((column) => (
           <span
             key={column.key}

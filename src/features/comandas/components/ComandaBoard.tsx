@@ -45,8 +45,8 @@ export function ComandaBoard({ initialData }: { initialData: BoardData }) {
   const employeeRole =
     (session?.user as { employeeRole?: string } | undefined)?.employeeRole ??
     ((session?.user as { role?: string } | undefined)?.role === "admin"
-      ? "admin"
-      : "garcom")
+      ? "ADMIN"
+      : "OPERADOR")
   const canManageOrders = ["admin", "ADMIN", "garcom", "OPERADOR"].includes(
     employeeRole
   )

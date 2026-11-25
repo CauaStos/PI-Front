@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input"
 import { api } from "@/lib/api"
 import {
   isAdminEmployeeRole,
+  normalizeEmployeeRole,
   type Employee,
   type EmployeeRole,
 } from "@/lib/employee-roles"
@@ -43,15 +44,11 @@ const roleOptions: { value: EmployeeRole; label: string }[] = [
   { value: "GERENTE", label: "Gerente" },
   { value: "OPERADOR", label: "Operador" },
   { value: "CLIENTE", label: "Cliente" },
-  { value: "garcom", label: "Garçom (legado)" },
-  { value: "cozinha", label: "Cozinha (legado)" },
 ]
 
 function roleLabel(role: EmployeeRole) {
-  return (
-    roleOptions.find((option) => option.value === role)?.label ??
-    (role === "admin" ? "Administrador" : role)
-  )
+  const current = normalizeEmployeeRole(role)
+  return roleOptions.find((option) => option.value === current)?.label ?? role
 }
 
 function emptyForm(): EmployeeForm {
@@ -131,7 +128,8 @@ export default function FuncionariosPage() {
     setForm({
       name: employee.name,
       email: employee.email,
-      role: employee.role,
+      // Papeis antigos (admin/garcom/cozinha) viram o equivalente atual ao salvar.
+      role: normalizeEmployeeRole(employee.role),
       avatar: employee.avatar,
       password: "",
     })
@@ -449,9 +447,6 @@ export default function FuncionariosPage() {
                       {option.label}
                     </option>
                   ))}
-                  {form.role === "admin" ? (
-                    <option value="admin">Administrador (legado)</option>
-                  ) : null}
                 </select>
               </FormField>
             ) : !editing && isAdmin ? (

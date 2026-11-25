@@ -18,6 +18,7 @@ export function ColumnChart({
   ariaLabel,
   formatValue,
   formatAxis,
+  heightClass = "h-44",
 }: {
   columns: Column[]
   /** Unidade contada (ex.: pedidos). Ignorada quando `formatValue` e passado. */
@@ -27,6 +28,8 @@ export function ColumnChart({
   formatValue?: (value: number) => string
   /** Formata os rotulos da grade; usa uma coluna de eixo mais larga. */
   formatAxis?: (value: number) => string
+  /** Altura da area do grafico (classe Tailwind). */
+  heightClass?: string
 }) {
   const axis = formatAxis ? "w-14" : "w-6"
   const offset = formatAxis ? "left-16" : "left-8"
@@ -40,7 +43,7 @@ export function ColumnChart({
 
   return (
     <figure aria-label={ariaLabel} className="m-0 pt-3">
-      <div className="relative h-44">
+      <div className={`relative ${heightClass}`}>
         {/* grade: topo, meio e base */}
         {[1, 0.5].map((f) => (
           <div

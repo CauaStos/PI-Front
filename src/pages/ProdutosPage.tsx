@@ -128,7 +128,7 @@ export default function ProdutosPage() {
       toast.success(text)
       return data
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Operacao falhou.")
+      toast.error(err instanceof Error ? err.message : "Operação falhou.")
       return null
     } finally {
       setIsMutating(false)
@@ -138,7 +138,7 @@ export default function ProdutosPage() {
   async function handleCreate() {
     const price = parseInput(newPrice)
     if (isNaN(price)) {
-      toast.error("Preco invalido. Use formato: 24,90")
+      toast.error("Preço inválido. Use formato: 24,90")
       return
     }
     const data = await mutate(async () => {
@@ -178,7 +178,7 @@ export default function ProdutosPage() {
     if (!selected) return
     const price = parseInput(editPrice)
     if (isNaN(price)) {
-      toast.error("Preco invalido. Use formato: 24,90")
+      toast.error("Preço inválido. Use formato: 24,90")
       return
     }
     const data = await mutate(async () => {
@@ -243,7 +243,7 @@ export default function ProdutosPage() {
         },
       })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Operacao falhou.")
+      toast.error(err instanceof Error ? err.message : "Operação falhou.")
     } finally {
       setIsMutating(false)
     }
@@ -452,7 +452,7 @@ export default function ProdutosPage() {
                 className="h-9 rounded-lg border border-input bg-background px-3"
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
-                placeholder="Descricao do produto"
+                placeholder="Descrição do produto"
               />
             </label>
             <label className="grid gap-1 text-sm font-semibold">

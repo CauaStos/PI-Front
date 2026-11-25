@@ -9,7 +9,7 @@ const manager = createTokenManager(async () => {
     error?: { message?: string } | null
   }
   if (result.error || !result.data?.token) {
-    throw new Error(result.error?.message ?? "Nao foi possivel obter o token.")
+    throw new Error(result.error?.message ?? "Não foi possível obter o token.")
   }
   return { token: result.data.token }
 })

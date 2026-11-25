@@ -97,7 +97,7 @@ export function ComandaCard({
         >
           <div className="space-y-1.5">
             <p className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
-              <ListMusic className="size-3.5" /> Fila de musicas
+              <ListMusic className="size-3.5" /> Fila de músicas
             </p>
             {queue.slice(0, 2).map((song) => (
               <p
@@ -115,7 +115,7 @@ export function ComandaCard({
             ) : null}
             {queue.length === 0 ? (
               <p className="text-xs font-semibold text-muted-foreground">
-                Aguardando primeira musica
+                Aguardando primeira música
               </p>
             ) : null}
           </div>

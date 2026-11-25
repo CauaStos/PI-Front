@@ -99,8 +99,8 @@ export function HistoryTable({ rows }: { rows: HistoryRow[] }) {
               <TableHead className="text-right">Finalizadas</TableHead>
               <TableHead className="text-right">Canceladas</TableHead>
               <TableHead>Pedidos</TableHead>
-              <TableHead>Periodo</TableHead>
-              <TableHead className="text-right">Ticket Medio</TableHead>
+              <TableHead>Período</TableHead>
+              <TableHead className="text-right">Ticket Médio</TableHead>
               <TableHead className="text-right">Receita</TableHead>
             </TableRow>
           </TableHeader>
@@ -249,11 +249,11 @@ export function HistoryTable({ rows }: { rows: HistoryRow[] }) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Pedido</TableHead>
-                  <TableHead>Funcionario</TableHead>
+                  <TableHead>Funcionário</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Pedido Em</TableHead>
                   <TableHead className="text-right">Qtd</TableHead>
-                  <TableHead className="text-right">Preco Un.</TableHead>
+                  <TableHead className="text-right">Preço Un.</TableHead>
                   <TableHead className="text-right">Subtotal</TableHead>
                 </TableRow>
               </TableHeader>

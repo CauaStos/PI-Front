@@ -81,7 +81,7 @@ export function AddOrderDialog({
         <DialogHeader>
           <DialogTitle>Adicionar pedido</DialogTitle>
           <DialogDescription>
-            Selecione produto, funcionario responsavel e quantidade para{" "}
+            Selecione produto, funcionário responsável e quantidade para{" "}
             {comandaName ? displayComandaName(comandaName) : "a comanda"}.
           </DialogDescription>
         </DialogHeader>

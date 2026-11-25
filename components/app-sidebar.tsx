@@ -125,7 +125,7 @@ export function AppSidebar() {
           </Avatar>
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
             <p className="truncate text-sm font-bold">
-              {user?.name ?? "Funcionario"}
+              {user?.name ?? "Funcionário"}
             </p>
             <p className="truncate text-xs font-medium text-zinc-500">
               {user?.email ?? ""}

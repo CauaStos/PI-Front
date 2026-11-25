@@ -214,16 +214,16 @@ export function getActionTitle(action: PendingAction) {
   if (action?.type === "finalizar-comanda") return "Finalizar comanda"
   if (action?.type === "cancelar-comanda") return "Cancelar comanda"
   if (action?.type === "remover-pedidos") return "Remover pedidos"
-  return "Confirmar acao"
+  return "Confirmar ação"
 }
 
 export function getActionDescription(action: PendingAction) {
   if (action?.type === "finalizar-comanda")
-    return "Confira a comanda antes de finalizar. Depois disso, ela deixa de aceitar alteracoes."
+    return "Confira a comanda antes de finalizar. Depois disso, ela deixa de aceitar alterações."
   if (action?.type === "cancelar-comanda")
-    return "Esta acao cancela a comanda selecionada e marca seus pedidos como cancelados."
+    return "Esta ação cancela a comanda selecionada e marca seus pedidos como cancelados."
   if (action?.type === "remover-pedidos")
-    return "Esta acao remove os pedidos selecionados. Pedidos entregues ou concluidos nao podem ser removidos."
+    return "Esta ação remove os pedidos selecionados. Pedidos entregues ou concluídos não podem ser removidos."
   return "Confirme para continuar."
 }
 
@@ -241,6 +241,22 @@ export function calcComandaTotal(comanda: Comanda): number {
 
 export function nextComandaName(index: number) {
   return `Comanda ${String(index).padStart(2, "0")}`
+}
+
+/**
+ * Menor numero que nenhuma comanda aberta usa. Comandas encerradas liberam o
+ * numero (antes contava o historico inteiro e a nova virava "Comanda 170").
+ */
+export function nextComandaNumber(comandas: Pick<Comanda, "tableName" | "status">[]) {
+  const used = new Set(
+    comandas
+      .filter((c) => c.status !== "finished" && c.status !== "cancelled")
+      .map((c) => Number.parseInt(displayComandaNumber(c.tableName), 10))
+      .filter(Number.isFinite)
+  )
+  let n = 1
+  while (used.has(n)) n++
+  return n
 }
 
 export function displayComandaName(name: string) {

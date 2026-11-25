@@ -52,7 +52,7 @@ export function validateReset(input: {
   confirmation: string
   token: string | null
 }): string | null {
-  if (!input.token) return "Link de redefinicao invalido ou incompleto."
+  if (!input.token) return "Link de redefinição inválido ou incompleto."
   return (
     validatePassword(input.password) ??
     validatePasswordConfirmation(input.password, input.confirmation)

@@ -170,7 +170,7 @@ export default function DashboardPage() {
           <p className="text-sm text-muted-foreground">
             O dashboard é restrito a administradores e gerentes.
           </p>
-          <Button render={<Link to="/comandas" />}>Voltar às comandas</Button>
+          <Button nativeButton={false} render={<Link to="/comandas" />}>Voltar às comandas</Button>
         </section>
       </main>
     )

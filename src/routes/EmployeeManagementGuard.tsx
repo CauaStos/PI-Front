@@ -60,7 +60,7 @@ export function EmployeeManagementGuard() {
             {error ||
               "Seu papel atual não permite acessar a administração de funcionários."}
           </p>
-          <Button render={<Link to="/comandas" />}>Voltar às comandas</Button>
+          <Button nativeButton={false} render={<Link to="/comandas" />}>Voltar às comandas</Button>
         </section>
       </main>
     )

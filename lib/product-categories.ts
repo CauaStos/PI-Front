@@ -13,7 +13,7 @@ export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number]
 export const CATEGORY_LABELS: Record<ProductCategory, string> = {
   comida: "Comida",
   bebida: "Bebida",
-  porcao: "Porcao",
+  porcao: "Porção",
   sobremesa: "Sobremesa",
   outros: "Outros",
 }

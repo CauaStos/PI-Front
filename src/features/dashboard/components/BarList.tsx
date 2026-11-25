@@ -34,8 +34,8 @@ export function BarList({
           key={row.key}
           className={`grid items-center gap-3 text-[13px] ${
             wideValue
-              ? "grid-cols-[96px_minmax(0,1fr)_88px]"
-              : "grid-cols-[96px_minmax(0,1fr)_36px]"
+              ? "grid-cols-[minmax(96px,1.4fr)_minmax(48px,1fr)_88px]"
+              : "grid-cols-[minmax(96px,1.4fr)_minmax(48px,1fr)_36px]"
           }`}
         >
           <span className="truncate font-medium text-muted-foreground" title={row.label}>
